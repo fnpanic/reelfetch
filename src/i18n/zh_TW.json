@@ -151,5 +151,6 @@
   "private_browsing_title": "無痕瀏覽",
   "private_browsing_warning": "ReelFetch 未在無痕視窗中啟用。請在擴充功能設定中開啟該選項。",
   "private_browsing_button": "變更無痕瀏覽設定",
-  "private_browsing_notifications": "顯示無痕下載的通知"
+  "private_browsing_notifications": "顯示無痕下載的通知",
+  "youtube_api": "YouTube：從 YouTube 播放器 API 取得串流連結（iOS 用戶端設定）"
 }

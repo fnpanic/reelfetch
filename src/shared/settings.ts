@@ -17,6 +17,8 @@ export interface Settings {
   preferOriginalAudio: boolean;
   /** Turbo capture playback speed. */
   turboSpeed: number;
+  /** Ask YouTube's player API (iOS client profile) for direct stream URLs. */
+  youtubeApi: boolean;
   privateNotifications: boolean;
   /** Audio-only downloads: keep the original codec (remux) or transcode to MP3. */
   audioFormat: 'original' | 'mp3';
@@ -51,6 +53,7 @@ export const DEFAULT_SETTINGS: Settings = {
   previewMode: 'image',
   preferOriginalAudio: true,
   turboSpeed: 16,
+  youtubeApi: true,
   privateNotifications: true,
   audioFormat: 'original',
   alwaysSaveAs: false,

@@ -151,5 +151,6 @@
   "private_browsing_title": "مرور خصوصی",
   "private_browsing_warning": "ReelFetch در پنجره‌های خصوصی فعال نیست. این گزینه را در تنظیمات افزونه روشن کنید.",
   "private_browsing_button": "تغییر تنظیم مرور خصوصی",
-  "private_browsing_notifications": "نمایش اعلان برای دانلودهای خصوصی"
+  "private_browsing_notifications": "نمایش اعلان برای دانلودهای خصوصی",
+  "youtube_api": "یوتیوب: دریافت پیوندهای پخش از API پخش‌کننده یوتیوب (نمایه کلاینت iOS)"
 }

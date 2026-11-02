@@ -151,5 +151,6 @@
   "private_browsing_title": "Privénavigatie",
   "private_browsing_warning": "ReelFetch is niet ingeschakeld in privévensters. Schakel die optie in bij de extensie-instellingen.",
   "private_browsing_button": "Instelling voor privénavigatie wijzigen",
-  "private_browsing_notifications": "Meldingen tonen voor privédownloads"
+  "private_browsing_notifications": "Meldingen tonen voor privédownloads",
+  "youtube_api": "YouTube: streamlinks ophalen via de speler-API van YouTube (iOS-clientprofiel)"
 }

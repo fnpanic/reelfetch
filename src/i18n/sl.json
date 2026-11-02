@@ -151,5 +151,6 @@
   "private_browsing_title": "Zasebno brskanje",
   "private_browsing_warning": "ReelFetch ni omogočen v zasebnih oknih. Vklopite to možnost v nastavitvah razširitve.",
   "private_browsing_button": "Spremeni nastavitev zasebnega brskanja",
-  "private_browsing_notifications": "Prikaži obvestila za zasebne prenose"
+  "private_browsing_notifications": "Prikaži obvestila za zasebne prenose",
+  "youtube_api": "YouTube: pridobi povezave do toka iz API-ja predvajalnika YouTube (profil odjemalca iOS)"
 }

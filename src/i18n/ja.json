@@ -151,5 +151,6 @@
   "private_browsing_title": "プライベートブラウズ",
   "private_browsing_warning": "ReelFetchはプライベートウィンドウでは有効になっていません。拡張機能の設定でこのオプションをオンにしてください。",
   "private_browsing_button": "プライベートブラウズの設定を変更",
-  "private_browsing_notifications": "プライベートダウンロードの通知を表示"
+  "private_browsing_notifications": "プライベートダウンロードの通知を表示",
+  "youtube_api": "YouTube: YouTube プレーヤー API からストリームリンクを取得 (iOS クライアントプロファイル)"
 }

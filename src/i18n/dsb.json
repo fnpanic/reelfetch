@@ -151,5 +151,6 @@
   "private_browsing_title": "Priwatne pśeglědowanje",
   "private_browsing_warning": "ReelFetch njejo w priwatnych wokenach aktiwěrowany. Zaszaltuj toś tu opciju w nastajenjach rozšyrjenja.",
   "private_browsing_button": "Nastajenje priwatnego pśeglědowanja změniś",
-  "private_browsing_notifications": "Powěsći za priwatne ześěgnjenja pokazaś"
+  "private_browsing_notifications": "Powěsći za priwatne ześěgnjenja pokazaś",
+  "youtube_api": "YouTube: wótkaze na stream z API wótgrawaka YouTube (profil klienta iOS)"
 }

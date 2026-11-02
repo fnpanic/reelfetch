@@ -151,5 +151,6 @@
   "private_browsing_title": "비공개 브라우징",
   "private_browsing_warning": "ReelFetch는 비공개 창에서 사용 설정되어 있지 않습니다. 확장 프로그램 설정에서 해당 옵션을 켜 주세요.",
   "private_browsing_button": "비공개 브라우징 설정 변경",
-  "private_browsing_notifications": "비공개 다운로드 알림 표시"
+  "private_browsing_notifications": "비공개 다운로드 알림 표시",
+  "youtube_api": "YouTube: YouTube 플레이어 API에서 스트림 링크 가져오기 (iOS 클라이언트 프로필)"
 }

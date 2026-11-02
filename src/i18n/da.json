@@ -151,5 +151,6 @@
   "private_browsing_title": "Privat browsing",
   "private_browsing_warning": "ReelFetch er ikke aktiveret i private vinduer. Slå indstillingen til i udvidelsens indstillinger.",
   "private_browsing_button": "Skift indstilling for privat browsing",
-  "private_browsing_notifications": "Vis notifikationer for private downloads"
+  "private_browsing_notifications": "Vis notifikationer for private downloads",
+  "youtube_api": "YouTube: hent streamlinks fra YouTubes afspiller-API (iOS-klientprofil)"
 }

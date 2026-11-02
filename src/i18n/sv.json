@@ -151,5 +151,6 @@
   "private_browsing_title": "Privat surfning",
   "private_browsing_warning": "ReelFetch är inte aktiverat i privata fönster. Aktivera det alternativet i tilläggets inställningar.",
   "private_browsing_button": "Ändra inställning för privat surfning",
-  "private_browsing_notifications": "Visa aviseringar för privata nedladdningar"
+  "private_browsing_notifications": "Visa aviseringar för privata nedladdningar",
+  "youtube_api": "YouTube: hämta strömlänkar från YouTubes spelar-API (iOS-klientprofil)"
 }

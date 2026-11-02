@@ -151,5 +151,6 @@
   "private_browsing_title": "Anonymní režim",
   "private_browsing_warning": "ReelFetch není v anonymních oknech povolen. Zapněte tuto možnost v nastavení rozšíření.",
   "private_browsing_button": "Změnit nastavení anonymního režimu",
-  "private_browsing_notifications": "Zobrazovat oznámení o stahování v anonymním režimu"
+  "private_browsing_notifications": "Zobrazovat oznámení o stahování v anonymním režimu",
+  "youtube_api": "YouTube: získat odkazy na stream z API přehrávače YouTube (profil klienta iOS)"
 }

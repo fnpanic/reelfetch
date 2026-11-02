@@ -151,5 +151,6 @@
   "private_browsing_title": "Частно сърфиране",
   "private_browsing_warning": "ReelFetch не е разрешен в частни прозорци. Включете тази опция в настройките на разширението.",
   "private_browsing_button": "Промяна на настройката за частно сърфиране",
-  "private_browsing_notifications": "Показване на известия за частни изтегляния"
+  "private_browsing_notifications": "Показване на известия за частни изтегляния",
+  "youtube_api": "YouTube: връзки към потока от API на плейъра на YouTube (профил на iOS клиент)"
 }

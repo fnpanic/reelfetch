@@ -151,5 +151,6 @@
   "private_browsing_title": "Gizli gezinme",
   "private_browsing_warning": "ReelFetch gizli pencerelerde etkin değil. Bu seçeneği uzantı ayarlarından açın.",
   "private_browsing_button": "Gizli gezinme ayarını değiştir",
-  "private_browsing_notifications": "Gizli indirmeler için bildirim göster"
+  "private_browsing_notifications": "Gizli indirmeler için bildirim göster",
+  "youtube_api": "YouTube: akış bağlantılarını YouTube oynatıcı API'sinden al (iOS istemci profili)"
 }

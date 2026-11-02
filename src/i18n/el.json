@@ -151,5 +151,6 @@
   "private_browsing_title": "Ιδιωτική περιήγηση",
   "private_browsing_warning": "Το ReelFetch δεν είναι ενεργοποιημένο σε ιδιωτικά παράθυρα. Ενεργοποιήστε αυτή την επιλογή στις ρυθμίσεις της επέκτασης.",
   "private_browsing_button": "Αλλαγή ρύθμισης ιδιωτικής περιήγησης",
-  "private_browsing_notifications": "Εμφάνιση ειδοποιήσεων για ιδιωτικές λήψεις"
+  "private_browsing_notifications": "Εμφάνιση ειδοποιήσεων για ιδιωτικές λήψεις",
+  "youtube_api": "YouTube: λήψη συνδέσμων ροής από το API του προγράμματος αναπαραγωγής (προφίλ πελάτη iOS)"
 }

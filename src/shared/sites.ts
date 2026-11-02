@@ -49,6 +49,32 @@ function dedupeHeights(vs: SiteVariant[]): SiteVariant[] {
 
 // ------------------------------------------------------------------ YouTube
 
+/**
+ * YouTube player API request (InnerTube, iOS client profile). Like VDH, this asks YouTube's own API for
+ * the stream list; the iOS profile returns plain stream URLs where the web page only offers SABR.
+ */
+export const YT_IOS = {
+  clientName: 'IOS',
+  clientId: '5',
+  clientVersion: '20.10.4',
+  userAgent: 'com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_3_2 like Mac OS X;)',
+};
+
+export function youtubePlayerRequest(videoId: string, origin = 'https://www.youtube.com') {
+  return {
+    url: `${origin}/youtubei/v1/player?prettyPrint=false`,
+    init: {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-YouTube-Client-Name': YT_IOS.clientId,
+        'X-YouTube-Client-Version': YT_IOS.clientVersion,
+      },
+      body: JSON.stringify({ videoId, context: { client: { clientName: YT_IOS.clientName, clientVersion: YT_IOS.clientVersion, hl: 'en' } } }),
+    } satisfies RequestInit,
+  };
+}
+
 export function youtube(pr: Json | null | undefined): SiteMedia[] {
   if (!pr?.videoDetails) return [];
   const vd = pr.videoDetails;

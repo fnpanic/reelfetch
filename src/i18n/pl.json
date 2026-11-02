@@ -151,5 +151,6 @@
   "private_browsing_title": "Przeglądanie prywatne",
   "private_browsing_warning": "ReelFetch nie jest włączony w oknach prywatnych. Włącz tę opcję w ustawieniach rozszerzenia.",
   "private_browsing_button": "Zmień ustawienie przeglądania prywatnego",
-  "private_browsing_notifications": "Pokazuj powiadomienia o pobraniach prywatnych"
+  "private_browsing_notifications": "Pokazuj powiadomienia o pobraniach prywatnych",
+  "youtube_api": "YouTube: pobieraj linki do strumienia z API odtwarzacza YouTube (profil klienta iOS)"
 }

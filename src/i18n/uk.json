@@ -151,5 +151,6 @@
   "private_browsing_title": "Приватний режим",
   "private_browsing_warning": "ReelFetch не ввімкнено у приватних вікнах. Увімкніть цю опцію в налаштуваннях розширення.",
   "private_browsing_button": "Змінити налаштування приватного режиму",
-  "private_browsing_notifications": "Показувати сповіщення про приватні завантаження"
+  "private_browsing_notifications": "Показувати сповіщення про приватні завантаження",
+  "youtube_api": "YouTube: отримувати посилання на потік через API плеєра YouTube (профіль клієнта iOS)"
 }

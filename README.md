@@ -91,7 +91,7 @@ analysis with REA).
 | Site extractors: YouTube, Vimeo, Bilibili, Facebook, Instagram, VK, OK.ru | ✅ | ✅ (player data; split audio/video merged; original audio preferred) |
 | Kick, TwitCasting, Chaturbate, iQIYI, Canva and other HLS/DASH sites | ✅ (per-site scripts) | ✅ via generic HLS/DASH detection |
 | JSON-LD `VideoObject` / Open Graph video on any page | - | ✅ |
-| YouTube: download without per-site deciphering (VDH implements YouTube's SABR protocol) | ✅ | ✅ via Turbo capture (best quality, ads skipped, auto-save) |
+| YouTube via YouTube's own API (VDH: SABR client) | ✅ | ✅ player API, iOS client profile (direct streams, all qualities) + Turbo capture fallback |
 | Default action (download / download as / audio / copy URL), "always copy URL" | ✅ | ✅ |
 | Media preview: image or short video preview | ✅ | ✅ (engine builds a 6 s clip of HLS/DASH streams) |
 | Smart naming: pick the title element on the page | ✅ (smart-naming page) | ✅ (on-page element picker) |
@@ -104,10 +104,12 @@ analysis with REA).
 | Premium/licence, account, reviews, reporting to vendor servers | ✅ | not applicable (free, no servers) |
 | Languages | 33 | the same 33 (en, de hand-written; others machine-translated, review welcome) |
 
-**How YouTube works here:** when the player data contains plain stream URLs, they are listed and merged like any
-other site. When it doesn't (ciphered signatures / SABR), ReelFetch doesn't reverse-engineer YouTube's protocol the way
-VDH does - Turbo capture records what YouTube's own player plays, at up to 16× speed. That keeps working when YouTube
-changes its internals. (The Chrome Web Store doesn't accept YouTube downloaders; install from the zip.)
+**How YouTube works here:** when the page's player data contains plain stream URLs, they are listed and merged like
+any other site. When it only offers SABR streams (today's normal case), ReelFetch asks YouTube's player API with the
+iOS client profile - like VDH, it gets the stream list from YouTube's own API - and lists every quality with separate
+video + audio merged (original audio preferred). The matching User-Agent is applied by a session rule scoped to the
+extension's own requests. Turbo capture remains as the fallback (and can be turned off/on: Settings → YouTube player
+API). The Chrome Web Store doesn't accept YouTube downloaders; install from the zip.
 
 **"Any stream" - what that means here:** every unprotected stream a browser can play is downloadable, either via its
 manifest/file or via MSE capture of what the player plays. DRM-protected media (Widevine, PlayReady, FairPlay,

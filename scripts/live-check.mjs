@@ -55,9 +55,29 @@ try {
   for (let i = 0; i < 60; i++) {
     await sleep(500);
     state = await api((id) => chrome.runtime.sendMessage({ type: 'get-state', tabId: id }), tabId);
-    if (state.media.some((m) => m.site === 'youtube')) break;
+    // Wait for the player-API item too (it arrives a moment after the page extractor's item).
+    if (state.media.some((m) => m.site === 'youtube' && m.kind === 'direct') || (i > 20 && state.media.some((m) => m.site === 'youtube'))) break;
   }
-  const yt = state.media.find((m) => m.site === 'youtube');
+  const yt = state.media.find((m) => m.site === 'youtube' && m.captureOnly) ?? state.media.find((m) => m.site === 'youtube');
+  const apiItem = state.media.find((m) => m.site === 'youtube' && m.kind === 'direct');
+  console.log('player API:', apiItem ? apiItem.variants.map((v) => `${v.label}${v.audioRef ? '+audio' : ''}`) : 'no direct formats');
+  if (apiItem && !process.env.RF_TURBO) {
+    // Preferred path: download the best variant via the API's direct stream URLs.
+    const started = Date.now();
+    await api((id) => chrome.runtime.sendMessage({ type: 'download', mediaId: id }), apiItem.id);
+    let job;
+    for (let i = 0; i < 1800; i++) {
+      await sleep(1000);
+      const s = await api((id) => chrome.runtime.sendMessage({ type: 'get-state', tabId: id }), tabId);
+      job = s.jobs.find((j) => j.media.id === apiItem.id);
+      if (i % 10 === 0) console.log(`  api download: ${job?.status} ${((job?.progress.bytes ?? 0) / 1e6).toFixed(1)}/${((job?.progress.total ?? 0) / 1e6).toFixed(1)} MB ${job?.progress.phase ?? ''}`);
+      if (job && job.status !== 'running' && job.status !== 'queued') break;
+    }
+    const [d] = job?.downloadIds?.length ? await api((id) => chrome.downloads.search({ id }), job.downloadIds[0]) : [];
+    console.log(`api download ${job?.status} in ${((Date.now() - started) / 1000).toFixed(1)} s ${job?.error ?? ''}`);
+    if (d?.filename) console.log(execFileSync(ffprobe, ['-v', 'error', '-show_entries', 'stream=codec_name,width,height:format=duration', '-of', 'compact', d.filename], { encoding: 'utf8' }).trim());
+    process.exit(job?.status === 'done' ? 0 : 1);
+  }
   console.log('extractor:', yt ? { title: yt.title, kind: yt.kind, captureOnly: !!yt.captureOnly, variants: yt.variants?.map((v) => v.label), duration: yt.duration } : 'nothing found');
   console.log('other detections:', state.media.filter((m) => m !== yt).map((m) => `${m.kind}:${m.url.slice(0, 80)}`));
 

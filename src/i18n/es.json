@@ -151,5 +151,6 @@
   "private_browsing_title": "Navegación privada",
   "private_browsing_warning": "ReelFetch no está activado en las ventanas privadas. Activa esa opción en los ajustes de la extensión.",
   "private_browsing_button": "Cambiar el ajuste de navegación privada",
-  "private_browsing_notifications": "Mostrar notificaciones de descargas privadas"
+  "private_browsing_notifications": "Mostrar notificaciones de descargas privadas",
+  "youtube_api": "YouTube: obtener enlaces del stream desde la API del reproductor de YouTube (perfil de cliente iOS)"
 }

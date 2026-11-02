@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bilibili, facebook, genericMeta, okru, vimeo, vk, youtube } from '../src/shared/sites';
+import { bilibili, facebook, genericMeta, okru, vimeo, vk, youtube, youtubePlayerRequest } from '../src/shared/sites';
 
 const ytBase = {
   playabilityStatus: { status: 'OK' },
@@ -42,6 +42,13 @@ describe('youtube', () => {
     });
     expect(m.captureOnly).toBe(true);
     expect(m.variants).toBeUndefined();
+  });
+
+  it('builds the player API request (iOS client profile)', () => {
+    const r = youtubePlayerRequest('abc123');
+    expect(r.url).toBe('https://www.youtube.com/youtubei/v1/player?prettyPrint=false');
+    expect(r.init.headers['X-YouTube-Client-Name']).toBe('5');
+    expect(JSON.parse(r.init.body)).toEqual({ videoId: 'abc123', context: { client: { clientName: 'IOS', clientVersion: '20.10.4', hl: 'en' } } });
   });
 
   it('uses the HLS manifest for live streams and skips unplayable videos', () => {

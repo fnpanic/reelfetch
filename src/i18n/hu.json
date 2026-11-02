@@ -151,5 +151,6 @@
   "private_browsing_title": "Privát böngészés",
   "private_browsing_warning": "A ReelFetch nincs engedélyezve a privát ablakokban. Kapcsold be ezt a beállítást a bővítmény beállításaiban.",
   "private_browsing_button": "Privát böngészés beállításának módosítása",
-  "private_browsing_notifications": "Értesítések megjelenítése a privát letöltésekről"
+  "private_browsing_notifications": "Értesítések megjelenítése a privát letöltésekről",
+  "youtube_api": "YouTube: streamlinkek lekérése a YouTube lejátszó API-jából (iOS kliensprofil)"
 }

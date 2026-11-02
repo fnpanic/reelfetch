@@ -37,6 +37,32 @@ export async function setHeaderRule(key: string, hosts: string[], headers: Reque
     .catch((e) => console.warn('[ReelFetch] header rule failed', e));
 }
 
+/**
+ * The iOS stream profile needs the matching User-Agent, which fetch() cannot set. This rule applies it
+ * only to the extension's own requests (initiator = this extension, no tab) to YouTube's API and CDN.
+ */
+export async function setYoutubeUaRule(userAgent: string | null, apiHost = 'www.youtube.com'): Promise<void> {
+  const id = ruleId('youtube-ua');
+  await chrome.declarativeNetRequest
+    .updateSessionRules({
+      removeRuleIds: [id],
+      addRules: userAgent
+        ? [
+            {
+              id,
+              priority: 2,
+              action: {
+                type: 'modifyHeaders' as chrome.declarativeNetRequest.RuleActionType,
+                requestHeaders: [{ header: 'user-agent', operation: 'set' as chrome.declarativeNetRequest.HeaderOperation, value: userAgent }],
+              },
+              condition: { requestDomains: [apiHost, 'googlevideo.com'], tabIds: [-1], initiatorDomains: [selfHost()] },
+            },
+          ]
+        : [],
+    })
+    .catch((e) => console.warn('[ReelFetch] UA rule failed', e));
+}
+
 export function clearHeaderRule(key: string): Promise<void> {
   return chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds: [ruleId(key)] }).catch(() => {});
 }

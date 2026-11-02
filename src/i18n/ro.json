@@ -151,5 +151,6 @@
   "private_browsing_title": "Navigare privată",
   "private_browsing_warning": "ReelFetch nu este activat în ferestrele private. Activează această opțiune în setările extensiei.",
   "private_browsing_button": "Schimbă setarea pentru navigarea privată",
-  "private_browsing_notifications": "Afișează notificări pentru descărcările private"
+  "private_browsing_notifications": "Afișează notificări pentru descărcările private",
+  "youtube_api": "YouTube: obține linkurile fluxului din API-ul playerului YouTube (profil client iOS)"
 }

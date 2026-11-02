@@ -151,5 +151,6 @@
   "private_browsing_title": "التصفح الخاص",
   "private_browsing_warning": "ReelFetch غير مفعّل في النوافذ الخاصة. فعّل هذا الخيار في إعدادات الإضافة.",
   "private_browsing_button": "تغيير إعداد التصفح الخاص",
-  "private_browsing_notifications": "إظهار الإشعارات للتنزيلات الخاصة"
+  "private_browsing_notifications": "إظهار الإشعارات للتنزيلات الخاصة",
+  "youtube_api": "يوتيوب: جلب روابط البث من واجهة مشغل يوتيوب (ملف عميل iOS)"
 }
