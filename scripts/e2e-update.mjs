@@ -5,8 +5,8 @@
 // 3. loads the installed extension, checks the update banner and runs the in-place update through the
 //    native messaging host (download, SHA-256 check, file swap),
 // 4. uninstalls and verifies that files and registry entries are gone.
-// Chromium's reload of a command-line-loaded extension is not representative (it unloads it), so the
-// final reload is checked by version on disk; a "Load unpacked" extension reloads from that folder.
+// Developer mode is switched on like a real "Load unpacked" setup (without it Chromium disables an
+// unpacked extension when it reloads), so the final reload into the new version is checked too.
 import { chromium } from 'playwright-core';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -72,6 +72,11 @@ try {
   sw ??= await ctx.waitForEvent('serviceworker');
   const id = sw.url().split('/')[2];
   check(id === JSON.parse(readFileSync(join(root, 'dist', 'build.json'), 'utf8')).extensionId, `fixed extension id ${id}`);
+  const extPage = await ctx.newPage();
+  await extPage.goto('chrome://extensions');
+  await extPage.evaluate(() => chrome.developerPrivate.updateProfileConfiguration({ inDeveloperMode: true }));
+  const extInfo = () =>
+    extPage.evaluate((x) => chrome.developerPrivate.getExtensionInfo(x).then((e) => ({ state: e.state, version: e.version })), id);
   const ui = await ctx.newPage();
   await ui.setViewportSize({ width: 460, height: 600 });
   await ui.goto(`chrome-extension://${id}/ui/popup.html`);
@@ -93,12 +98,25 @@ try {
   await ui.click('.banner.update button');
   for (let i = 0; i < 60 && version() !== next; i++) await sleep(500);
   check(version() === next, `in-place update installed ${version()}`);
+  let after;
+  for (let i = 0; i < 30 && after?.version !== next; i++) {
+    await sleep(500);
+    after = await extInfo().catch(() => undefined);
+  }
+  check(after?.state === 'ENABLED' && after?.version === next, `extension reloaded itself into ${after?.version} (${after?.state})`);
+  // And it works after the reload: its pages and background answer again.
+  const ui2 = await ctx.newPage();
+  await ui2.goto(`chrome-extension://${id}/ui/popup.html?tabId=${tabId}`);
+  const st2 = await ui2.evaluate(() => chrome.runtime.sendMessage({ type: 'get-state' })).catch((e) => ({ error: String(e) }));
+  check(st2?.update?.current === next, `background runs the new version (${st2?.update?.current ?? JSON.stringify(st2)})`);
 } finally {
   await ctx.close();
   server.close();
   execFileSync(join(dir, 'unins000.exe'), ['/VERYSILENT', '/SUPPRESSMSGBOXES']);
   for (let i = 0; i < 20 && existsSync(extDir); i++) await sleep(500);
   check(!existsSync(extDir) && ps(`Test-Path '${hostKey}'`) === 'False', 'uninstall removed files and registry entries');
+  // dist/ was built against the local test server: restore the normal build (browsers may load it).
+  execFileSync(process.execPath, ['scripts/build.mjs'], { cwd: root, stdio: 'ignore' });
 }
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll setup/update checks passed');
 process.exit(failures ? 1 : 0);
