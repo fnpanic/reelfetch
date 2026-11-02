@@ -152,6 +152,7 @@
   "private_browsing_warning": "ReelFetch ùn hè micca attivatu in e finestre private. Attivate st'opzione in i paràmetri di l'estensione.",
   "private_browsing_button": "Cambià u paràmetru di navigazione privata",
   "private_browsing_notifications": "Mostra e nutificazioni per i scaricamenti privati",
+  "youtube_api": "YouTube: piglià i ligami di u flussu da l'API di u lettore YouTube (prufilu di cliente iOS)",
   "err_stalled": "Firmatu: troppu tempu senza prugressu. Pruvate torna o aduprate a cattura turbo.",
   "err_tab_closed": "L’unghjetta hè stata chjosa nanzu chì a cattura finissi.",
   "update_available": "Nova versione dispunibule:",

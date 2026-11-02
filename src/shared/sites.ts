@@ -27,6 +27,8 @@ export interface SiteMedia {
   /** Inline MPD text. */
   dashXml?: string;
   variants?: SiteVariant[];
+  /** Player config JSON to fetch with extension privileges (Vimeo's new pages carry no inline config). */
+  configUrl?: string;
   /** No direct stream URLs available: offer turbo capture. */
   captureOnly?: boolean;
   drm?: boolean;
@@ -46,6 +48,32 @@ function dedupeHeights(vs: SiteVariant[]): SiteVariant[] {
 }
 
 // ------------------------------------------------------------------ YouTube
+
+/**
+ * YouTube player API request (InnerTube, iOS client profile). Like VDH, this asks YouTube's own API for
+ * the stream list; the iOS profile returns plain stream URLs where the web page only offers SABR.
+ */
+export const YT_IOS = {
+  clientName: 'IOS',
+  clientId: '5',
+  clientVersion: '20.10.4',
+  userAgent: 'com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_3_2 like Mac OS X;)',
+};
+
+export function youtubePlayerRequest(videoId: string, origin = 'https://www.youtube.com') {
+  return {
+    url: `${origin}/youtubei/v1/player?prettyPrint=false`,
+    init: {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-YouTube-Client-Name': YT_IOS.clientId,
+        'X-YouTube-Client-Version': YT_IOS.clientVersion,
+      },
+      body: JSON.stringify({ videoId, context: { client: { clientName: YT_IOS.clientName, clientVersion: YT_IOS.clientVersion, hl: 'en' } } }),
+    } satisfies RequestInit,
+  };
+}
 
 export function youtube(pr: Json | null | undefined): SiteMedia[] {
   if (!pr?.videoDetails) return [];
@@ -126,9 +154,17 @@ export function bilibili(playinfo: Json | null | undefined, title?: string, page
 
 // ------------------------------------------------------------------ Vimeo
 
-export function vimeo(config: Json | null | undefined): SiteMedia[] {
+/** Vimeo video id from a vimeo.com / player.vimeo.com URL. */
+export function vimeoId(url: string): string | undefined {
+  return /vimeo\.com\/(?:video\/|channels\/[^/]+\/|groups\/[^/]+\/videos\/|showcase\/\d+\/video\/)?(\d{5,})/.exec(url)?.[1];
+}
+
+export function vimeo(config: Json | null | undefined, pageUrl?: string): SiteMedia[] {
   const files = config?.request?.files;
-  if (!files) return [];
+  if (!files) {
+    const id = pageUrl && vimeoId(pageUrl);
+    return id ? [{ site: 'vimeo', key: `vimeo:${id}:config`, configUrl: `https://player.vimeo.com/video/${id}/config` }] : [];
+  }
   const video = config.video ?? {};
   const base = {
     site: 'vimeo',
@@ -243,7 +279,9 @@ export function facebook(source: string, title?: string): SiteMedia[] {
 
 // ------------------------------------------------------------------ generic page metadata (any site)
 
-/** JSON-LD VideoObject and Open Graph video tags. */
+const MEDIA_URL = /\.(m3u8|mpd|mp4|m4v|webm|mov|mkv|flv|f4v|ogv|3gp|avi|wmv|mpe?g|mp3|m4a|aac|ogg|oga|opus|wav|flac)(\?|$)/i;
+
+/** JSON-LD VideoObject and Open Graph video tags (only URLs that are actually media). */
 export function genericMeta(jsonLd: string[], og: Record<string, string>, title?: string): SiteMedia[] {
   const urls = new Set<string>();
   const visit = (n: unknown): void => {
@@ -251,7 +289,8 @@ export function genericMeta(jsonLd: string[], og: Record<string, string>, title?
     if (Array.isArray(n)) return n.forEach(visit);
     const o = n as Json;
     const type = ([] as string[]).concat(o['@type'] ?? []);
-    if (type.includes('VideoObject') && isHttp(o.contentUrl)) urls.add(o.contentUrl);
+    if (type.includes('VideoObject') && isHttp(o.contentUrl) && (MEDIA_URL.test(o.contentUrl) || /^video\//.test(o.encodingFormat ?? '')))
+      urls.add(o.contentUrl);
     for (const v of Object.values(o)) if (v && typeof v === 'object') visit(v);
   };
   for (const raw of jsonLd) {
@@ -261,8 +300,11 @@ export function genericMeta(jsonLd: string[], og: Record<string, string>, title?
       /* invalid JSON-LD */
     }
   }
+  // og:video is often an HTML player page (YouTube: /embed/...): only accept real media.
+  const ogType = og['og:video:type'] ?? '';
+  const typeOk = /^video\/|mpegurl|dash\+xml/i.test(ogType) && !/html|flash/i.test(ogType);
   for (const k of ['og:video:secure_url', 'og:video:url', 'og:video', 'twitter:player:stream'])
-    if (isHttp(og[k]) && !/\.(swf|html?)(\?|$)/i.test(og[k])) urls.add(og[k]);
+    if (isHttp(og[k]) && (MEDIA_URL.test(og[k]) || typeOk)) urls.add(og[k]);
   return [...urls].slice(0, 5).map((url) =>
     /\.m3u8(\?|$)/i.test(url)
       ? { site: 'page', key: url, title, hls: url }

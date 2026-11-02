@@ -152,6 +152,7 @@
   "private_browsing_warning": "ReelFetch není v anonymních oknech povolen. Zapněte tuto možnost v nastavení rozšíření.",
   "private_browsing_button": "Změnit nastavení anonymního režimu",
   "private_browsing_notifications": "Zobrazovat oznámení o stahování v anonymním režimu",
+  "youtube_api": "YouTube: získat odkazy na stream z API přehrávače YouTube (profil klienta iOS)",
   "err_stalled": "Zastaveno: příliš dlouho bez pokroku. Zkuste to znovu nebo použijte turbo záznam.",
   "err_tab_closed": "Karta byla zavřena dřív, než záznam skončil.",
   "update_available": "K dispozici je nová verze:",

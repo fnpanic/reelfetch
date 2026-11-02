@@ -50,7 +50,9 @@ streams), the item offers **Turbo capture**.
 
 **Turbo capture** (works on any site): ReelFetch reloads the page, plays the video *muted at up to 16× speed* from the
 start at the best quality, skips YouTube pre-roll ads, records exactly what the player receives and saves it
-automatically when the video ends - a 10-minute video is captured in well under a minute.
+automatically when the video ends. The speed adapts to the player's buffer: it races while plenty is buffered and
+slows down before the player starves (YouTube buffers ~60 s ahead and resets itself when it runs dry), so turbo runs
+as fast as the site delivers. A watchdog saves what was captured if a player stops making progress for 45 s.
 
 **No video found?** Click *No video?* → *Reload page* (optionally clearing the site's cookies), start a *Turbo
 capture*, or enable **stream capture** for the site to record what the player plays at normal speed.
@@ -89,7 +91,7 @@ analysis with REA).
 | Site extractors: YouTube, Vimeo, Bilibili, Facebook, Instagram, VK, OK.ru | ✅ | ✅ (player data; split audio/video merged; original audio preferred) |
 | Kick, TwitCasting, Chaturbate, iQIYI, Canva and other HLS/DASH sites | ✅ (per-site scripts) | ✅ via generic HLS/DASH detection |
 | JSON-LD `VideoObject` / Open Graph video on any page | - | ✅ |
-| YouTube: download without per-site deciphering (VDH implements YouTube's SABR protocol) | ✅ | ✅ via Turbo capture (best quality, ads skipped, auto-save) |
+| YouTube via YouTube's own API (VDH: SABR client) | ✅ | ✅ player API, iOS client profile (direct streams, all qualities) + Turbo capture fallback |
 | Default action (download / download as / audio / copy URL), "always copy URL" | ✅ | ✅ |
 | Media preview: image or short video preview | ✅ | ✅ (engine builds a 6 s clip of HLS/DASH streams) |
 | Smart naming: pick the title element on the page | ✅ (smart-naming page) | ✅ (on-page element picker) |
@@ -102,10 +104,12 @@ analysis with REA).
 | Premium/licence, account, reviews, reporting to vendor servers | ✅ | not applicable (free, no servers) |
 | Languages | 33 | the same 33 (en, de hand-written; others machine-translated, review welcome) |
 
-**How YouTube works here:** when the player data contains plain stream URLs, they are listed and merged like any
-other site. When it doesn't (ciphered signatures / SABR), ReelFetch doesn't reverse-engineer YouTube's protocol the way
-VDH does - Turbo capture records what YouTube's own player plays, at up to 16× speed. That keeps working when YouTube
-changes its internals. (The Chrome Web Store doesn't accept YouTube downloaders; install from the zip.)
+**How YouTube works here:** when the page's player data contains plain stream URLs, they are listed and merged like
+any other site. When it only offers SABR streams (today's normal case), ReelFetch asks YouTube's player API with the
+iOS client profile - like VDH, it gets the stream list from YouTube's own API - and lists every quality with separate
+video + audio merged (original audio preferred). The matching User-Agent is applied by a session rule scoped to the
+extension's own requests. Turbo capture remains as the fallback (and can be turned off/on: Settings → YouTube player
+API). The Chrome Web Store doesn't accept YouTube downloaders; install from the zip.
 
 **"Any stream" - what that means here:** every unprotected stream a browser can play is downloadable, either via its
 manifest/file or via MSE capture of what the player plays. DRM-protected media (Widevine, PlayReady, FairPlay,
@@ -155,6 +159,8 @@ Plain files skip the engine and go straight to the browser's download manager (r
 npm test             # unit + engine integration tests (real HLS/DASH fixtures over HTTP) + locale checks
 RF_NETWORK=1 npm test  # also checks public reference streams (DASH-IF livesim2 live DASH, Mux HLS)
 npx web-ext lint --source-dir dist/firefox   # Mozilla's add-on linter on the Firefox build
+npm run live:detect  # real sites: what the extractors / detection find (needs internet)
+npm run live:youtube # real YouTube: extractor + full turbo capture, validated with ffprobe
 npm run typecheck
 npm run build
 npm run e2e          # loads dist/chrome into Chromium and runs detection/download/capture end-to-end
@@ -170,9 +176,15 @@ Test fixtures in `test/fixtures` were generated with ffmpeg (see `test/fixtures/
 - MSE capture records only what is played. Seeking while recording can produce gaps (Turbo capture avoids this by
   playing from the start). Turbo capture follows the player's adaptive quality; it requests the best level on
   YouTube, other players may pick lower levels on slow connections.
-- Site extractors were tested against synthetic player data (unit tests + an in-browser run against a mapped
-  `www.youtube.com`), not against the live sites; sites change their page data, so an extractor can break - Turbo
-  capture and the generic HLS/DASH detection keep working in that case.
+- Live-site status (checked 2026-11-02 with `npm run live:detect` / `live:youtube` from Germany, headless Chromium):
+  YouTube extractor ✅ (title/duration; today's YouTube is SABR-only, so it offers Turbo capture). YouTube Turbo
+  capture produced a valid 1080p AV1 + Opus file, but only of the first ~60 s: YouTube stops playback in automated
+  headless browsers (it doesn't even play at 1× there without the extension), so the watchdog saved the partial
+  capture - a full-length run needs a normal browser profile. Vimeo ✅
+  (title, 4 qualities - this public video is FairPlay-DRM'd by Vimeo and correctly refused), generic HLS (hls.js demo)
+  ✅. Bilibili redirected the headless browser to an error page and OK.ru needs a valid video id, so those two
+  extractors are covered by unit tests only; Facebook/Instagram/VK need logins and are unit-tested only. Sites change
+  their page data, so an extractor can break - Turbo capture and the generic HLS/DASH detection keep working then.
 - HLS `SAMPLE-AES` and any Widevine/PlayReady/FairPlay content is DRM and is refused by design (as in VDH).
 - Live recordings start at the live edge (like a player), not at the beginning of the DVR window.
 - Audio-only MP3 conversion applies to stream/file downloads; MSE captures are saved in their original codec.

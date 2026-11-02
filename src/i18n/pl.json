@@ -152,6 +152,7 @@
   "private_browsing_warning": "ReelFetch nie jest włączony w oknach prywatnych. Włącz tę opcję w ustawieniach rozszerzenia.",
   "private_browsing_button": "Zmień ustawienie przeglądania prywatnego",
   "private_browsing_notifications": "Pokazuj powiadomienia o pobraniach prywatnych",
+  "youtube_api": "YouTube: pobieraj linki do strumienia z API odtwarzacza YouTube (profil klienta iOS)",
   "err_stalled": "Zatrzymano: zbyt długo bez postępu. Spróbuj ponownie lub użyj przechwytywania turbo.",
   "err_tab_closed": "Karta została zamknięta przed zakończeniem przechwytywania.",
   "update_available": "Dostępna jest nowa wersja:",

@@ -152,6 +152,7 @@
   "private_browsing_warning": "ReelFetch 未在无痕窗口中启用。请在扩展设置中开启该选项。",
   "private_browsing_button": "更改无痕浏览设置",
   "private_browsing_notifications": "显示无痕下载的通知",
+  "youtube_api": "YouTube：从 YouTube 播放器 API 获取流链接（iOS 客户端配置）",
   "err_stalled": "已停止：长时间没有进展。请重试或使用加速捕获。",
   "err_tab_closed": "捕获完成前标签页已关闭。",
   "update_available": "有新版本可用：",

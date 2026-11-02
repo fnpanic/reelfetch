@@ -152,6 +152,7 @@
   "private_browsing_warning": "ReelFetchはプライベートウィンドウでは有効になっていません。拡張機能の設定でこのオプションをオンにしてください。",
   "private_browsing_button": "プライベートブラウズの設定を変更",
   "private_browsing_notifications": "プライベートダウンロードの通知を表示",
+  "youtube_api": "YouTube: YouTube プレーヤー API からストリームリンクを取得 (iOS クライアントプロファイル)",
   "err_stalled": "停止しました: 長時間進行がありません。再試行するか、ターボキャプチャを使ってください。",
   "err_tab_closed": "キャプチャが終わる前にタブが閉じられました。",
   "update_available": "新しいバージョンがあります:",

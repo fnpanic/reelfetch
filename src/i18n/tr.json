@@ -152,6 +152,7 @@
   "private_browsing_warning": "ReelFetch gizli pencerelerde etkin değil. Bu seçeneği uzantı ayarlarından açın.",
   "private_browsing_button": "Gizli gezinme ayarını değiştir",
   "private_browsing_notifications": "Gizli indirmeler için bildirim göster",
+  "youtube_api": "YouTube: akış bağlantılarını YouTube oynatıcı API'sinden al (iOS istemci profili)",
   "err_stalled": "Durduruldu: çok uzun süredir ilerleme yok. Tekrar deneyin veya turbo yakalamayı kullanın.",
   "err_tab_closed": "Yakalama bitmeden sekme kapatıldı.",
   "update_available": "Yeni sürüm mevcut:",

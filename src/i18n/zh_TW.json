@@ -152,6 +152,7 @@
   "private_browsing_warning": "ReelFetch 未在無痕視窗中啟用。請在擴充功能設定中開啟該選項。",
   "private_browsing_button": "變更無痕瀏覽設定",
   "private_browsing_notifications": "顯示無痕下載的通知",
+  "youtube_api": "YouTube：從 YouTube 播放器 API 取得串流連結（iOS 用戶端設定）",
   "err_stalled": "已停止：長時間沒有進度。請重試或使用加速擷取。",
   "err_tab_closed": "擷取完成前分頁已關閉。",
   "update_available": "有新版本可用：",

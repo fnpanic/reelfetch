@@ -152,6 +152,7 @@
   "private_browsing_warning": "ReelFetch non è attivo nelle finestre private. Attiva questa opzione nelle impostazioni dell'estensione.",
   "private_browsing_button": "Modifica l'impostazione di navigazione privata",
   "private_browsing_notifications": "Mostra le notifiche per i download privati",
+  "youtube_api": "YouTube: ottieni i link dello stream dall'API del player di YouTube (profilo client iOS)",
   "err_stalled": "Interrotto: nessun avanzamento da troppo tempo. Riprova o usa la cattura turbo.",
   "err_tab_closed": "La scheda è stata chiusa prima della fine della cattura.",
   "update_available": "Nuova versione disponibile:",

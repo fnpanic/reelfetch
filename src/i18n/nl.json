@@ -152,6 +152,7 @@
   "private_browsing_warning": "ReelFetch is niet ingeschakeld in privévensters. Schakel die optie in bij de extensie-instellingen.",
   "private_browsing_button": "Instelling voor privénavigatie wijzigen",
   "private_browsing_notifications": "Meldingen tonen voor privédownloads",
+  "youtube_api": "YouTube: streamlinks ophalen via de speler-API van YouTube (iOS-clientprofiel)",
   "err_stalled": "Gestopt: te lang geen voortgang. Probeer het opnieuw of gebruik turbo-opname.",
   "err_tab_closed": "Het tabblad is gesloten voordat de opname klaar was.",
   "update_available": "Nieuwe versie beschikbaar:",

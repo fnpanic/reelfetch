@@ -60,7 +60,8 @@ function scanMeta() {
   const jsonLd = Array.from(document.querySelectorAll('script[type="application/ld+json"]'), (s) => s.textContent ?? '');
   const og: Record<string, string> = {};
   document.querySelectorAll<HTMLMetaElement>('meta[property^="og:video"], meta[name^="twitter:player:stream"]').forEach((m) => {
-    og[m.getAttribute('property') ?? m.name] = new URL(m.content, location.href).href;
+    const key = m.getAttribute('property') ?? m.name;
+    og[key] = key.endsWith(':type') ? m.content : new URL(m.content, location.href).href;
   });
   const items = genericMeta(jsonLd, og, document.title);
   const key = JSON.stringify(items);

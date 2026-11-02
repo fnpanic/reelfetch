@@ -152,6 +152,7 @@
   "private_browsing_warning": "ReelFetch no està activat a les finestres privades. Activa aquesta opció a la configuració de l'extensió.",
   "private_browsing_button": "Canvia la configuració de navegació privada",
   "private_browsing_notifications": "Mostra notificacions de les baixades privades",
+  "youtube_api": "YouTube: obtén els enllaços del flux de l'API del reproductor de YouTube (perfil de client iOS)",
   "err_stalled": "Aturat: massa temps sense progrés. Torneu-ho a provar o feu servir la captura turbo.",
   "err_tab_closed": "La pestanya s’ha tancat abans que acabés la captura.",
   "update_available": "Nova versió disponible:",

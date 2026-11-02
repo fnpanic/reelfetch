@@ -152,6 +152,7 @@
   "private_browsing_warning": "ReelFetch ni omogočen v zasebnih oknih. Vklopite to možnost v nastavitvah razširitve.",
   "private_browsing_button": "Spremeni nastavitev zasebnega brskanja",
   "private_browsing_notifications": "Prikaži obvestila za zasebne prenose",
+  "youtube_api": "YouTube: pridobi povezave do toka iz API-ja predvajalnika YouTube (profil odjemalca iOS)",
   "err_stalled": "Ustavljeno: predolgo ni napredka. Poskusite znova ali uporabite turbo zajem.",
   "err_tab_closed": "Zavihek je bil zaprt, preden se je zajem končal.",
   "update_available": "Na voljo je nova različica:",

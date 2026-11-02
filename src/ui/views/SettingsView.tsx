@@ -245,6 +245,7 @@ export function SettingsView({ settings: s, update, updateState }: Props & { upd
 
       <Section title={t('preview_mode_title')}>
         <Select label={t('preview_mode_title')} k="previewMode" s={s} update={update} options={[['none', t('preview_mode_none')], ['image', t('preview_mode_image')], ['video', t('preview_mode_video')]]} />
+        <Check label={t('youtube_api')} k="youtubeApi" s={s} update={update} />
         <Select label={t('turbo_speed')} k="turboSpeed" s={s} update={update} options={[2, 4, 8, 16].map((n) => [n, `${n}×`])} />
         <p className="hint">{t('turbo_capture_hint')}</p>
       </Section>

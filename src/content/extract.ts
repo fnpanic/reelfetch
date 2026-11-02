@@ -32,7 +32,7 @@ import { bilibili, facebook, okru, vimeo, vk, youtube, type SiteMedia } from '..
     }
     if (/(^|\.)bilibili\.(com|tv)$/.test(h))
       return bilibili(w.__playinfo__ ?? w.__INITIAL_STATE__?.playinfo, (w.__INITIAL_STATE__?.videoData?.title as string) ?? ogTitle(), location.href);
-    if (/(^|\.)vimeo\.com$/.test(h)) return vimeo(w.playerConfig ?? w.vimeo?.clip_page_config?.player?.config);
+    if (/(^|\.)vimeo\.com$/.test(h)) return vimeo(w.playerConfig ?? w.vimeo?.clip_page_config?.player?.config, location.href);
     if (/(^|\.)ok\.ru$/.test(h))
       return okru(Array.from(document.querySelectorAll('[data-options]'), (e) => e.getAttribute('data-options') ?? ''));
     if (/(^|\.)(vk\.(com|ru)|vkvideo\.ru)$/.test(h)) return vk(scriptsText(), ogTitle());

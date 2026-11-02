@@ -152,6 +152,7 @@
   "private_browsing_warning": "A ReelFetch nincs engedélyezve a privát ablakokban. Kapcsold be ezt a beállítást a bővítmény beállításaiban.",
   "private_browsing_button": "Privát böngészés beállításának módosítása",
   "private_browsing_notifications": "Értesítések megjelenítése a privát letöltésekről",
+  "youtube_api": "YouTube: streamlinkek lekérése a YouTube lejátszó API-jából (iOS kliensprofil)",
   "err_stalled": "Leállítva: túl sokáig nem volt előrehaladás. Próbálja újra, vagy használja a turbó rögzítést.",
   "err_tab_closed": "A lap bezárult, mielőtt a rögzítés befejeződött.",
   "update_available": "Új verzió érhető el:",

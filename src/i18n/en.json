@@ -152,6 +152,7 @@
   "private_browsing_warning": "ReelFetch is not enabled in private windows. Turn on that option in the extension settings.",
   "private_browsing_button": "Change private browsing setting",
   "private_browsing_notifications": "Show notifications for private downloads",
+  "youtube_api": "YouTube: get stream links from YouTube's player API (iOS client profile)",
   "err_stalled": "Stopped: no progress for too long. Try again or use Turbo capture.",
   "err_tab_closed": "The tab was closed before the capture finished.",
   "update_available": "New version available:",

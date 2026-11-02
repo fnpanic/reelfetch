@@ -152,6 +152,7 @@
   "private_browsing_warning": "ReelFetch tidak diaktifkan di jendela pribadi. Aktifkan opsi tersebut di pengaturan ekstensi.",
   "private_browsing_button": "Ubah pengaturan penjelajahan pribadi",
   "private_browsing_notifications": "Tampilkan notifikasi untuk unduhan pribadi",
+  "youtube_api": "YouTube: ambil tautan stream dari API pemutar YouTube (profil klien iOS)",
   "err_stalled": "Dihentikan: terlalu lama tanpa kemajuan. Coba lagi atau gunakan tangkapan turbo.",
   "err_tab_closed": "Tab ditutup sebelum tangkapan selesai.",
   "update_available": "Versi baru tersedia:",

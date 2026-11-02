@@ -26,7 +26,7 @@ let flakyDown = false; // toggled by the retry test
 const LONG = 'An Extremely Long Video Title That Never Ends ' + 'Unbroken_Word_Without_Any_Spaces_'.repeat(5);
 async function handler(req, res) {
   const url = new URL(req.url, 'http://x');
-  log.push({ path: url.pathname, referer: req.headers.referer ?? '' });
+  log.push({ path: url.pathname, query: url.search, referer: req.headers.referer ?? '', ua: req.headers['user-agent'] ?? '' });
   let path = url.pathname;
   if (path === '/long.html') {
     res.setHeader('Content-Type', 'text/html');
@@ -62,14 +62,32 @@ async function handler(req, res) {
   });
 </script>`);
   }
+  if (path === '/youtubei/v1/player' && req.method === 'POST') {
+    // Mock of YouTube's player API (iOS client profile): direct stream URLs.
+    let body = '';
+    for await (const c of req) body += c;
+    const { videoId, context } = JSON.parse(body);
+    const origin = `https://${req.headers.host}`;
+    res.setHeader('Content-Type', 'application/json');
+    return res.end(JSON.stringify({
+      playabilityStatus: { status: context?.client?.clientName === 'IOS' ? 'OK' : 'LOGIN_REQUIRED' },
+      videoDetails: { videoId, title: 'SABR Only Video', lengthSeconds: '10' },
+      streamingData: {
+        adaptiveFormats: [
+          { itag: 137, url: `${origin}/site-video.mp4?yt=ios`, mimeType: 'video/mp4; codecs="avc1"', height: 180, qualityLabel: '180p', bitrate: 400000 },
+          { itag: 140, url: `${origin}/site-audio.m4a?yt=ios`, mimeType: 'audio/mp4; codecs="mp4a.40.2"', bitrate: 64000, audioTrack: { audioIsDefault: true } },
+        ],
+      },
+    }));
+  }
   if (path === '/watch') {
     // Synthetic YouTube watch page (www.youtube.com is mapped to this server): exercises the real
     // page-world extractor + background intake + split video/audio merge.
     const origin = `http://${req.headers.host}`;
     const pr = {
       playabilityStatus: { status: 'OK' },
-      videoDetails: { videoId: 'abc123', title: 'Never Gonna Give Up Testing', lengthSeconds: '10', thumbnail: { thumbnails: [{ url: `${origin}/thumb.png` }] } },
-      streamingData: {
+      videoDetails: { videoId: url.searchParams.get('v') ?? 'abc123', title: 'Never Gonna Give Up Testing', lengthSeconds: '10', thumbnail: { thumbnails: [{ url: `${origin}/thumb.png` }] } },
+      streamingData: url.searchParams.get('v') === 'sabrOnly001' ? { serverAbrStreamingUrl: `${origin}/sabr` } : {
         adaptiveFormats: [
           { itag: 137, url: `${origin}/site-video.mp4`, mimeType: 'video/mp4; codecs="avc1"', height: 180, width: 320, qualityLabel: '180p', bitrate: 400000 },
           { itag: 140, url: `${origin}/site-audio.m4a`, mimeType: 'audio/mp4; codecs="mp4a.40.2"', bitrate: 64000, audioTrack: { audioIsDefault: true } },
@@ -337,8 +355,12 @@ try {
   await sleep(1000);
   flakyDown = false;
   await ui.click(`.job.error button[title="${await api(() => chrome.i18n.getMessage('retry_download_button_tooltip'))}"]`);
-  await ui.waitForSelector('.job.done', { timeout: 20000 }).catch(() => {});
-  const retried = (await api((id) => chrome.runtime.sendMessage({ type: 'get-state', tabId: id }), longTab)).jobs.find((j) => j.media.id === flaky.id);
+  let retried;
+  for (let i = 0; i < 40 && retried?.status !== 'done'; i++) {
+    await sleep(500);
+    retried = (await api((id) => chrome.runtime.sendMessage({ type: 'get-state', tabId: id }), longTab)).jobs.find((j) => j.media.id === flaky.id);
+  }
+  await sleep(500);
   check(retried?.status === 'done' && (await ui.locator('.job.error').count()) === 0, `retry from the UI works after a worker restart (${retried?.status} ${retried?.error ?? ''})`);
   const rowsBefore = await ui.locator('.row').count();
   await cdp.send('ServiceWorker.stopAllWorkers');
@@ -426,6 +448,42 @@ try {
       yj?.status === 'done' && /h264/.test(probe) && /aac/.test(probe) && yj.basename.startsWith('Never Gonna Give Up Testing'),
       `YouTube-style split download merged: ${yj?.basename} ${probe} ${yj?.error ?? ''}`,
     );
+  }
+
+  // YouTube page with SABR-only streams -> the player API (iOS profile) provides direct formats.
+  if (httpsPort) {
+    const sabrUrl = `https://www.youtube.com:${httpsPort}/watch?v=sabrOnly001`;
+    const sp = await ctx.newPage();
+    await sp.goto(sabrUrl);
+    const sTab = await api((u) => chrome.tabs.query({ url: u }).then((t) => t[0]?.id), sabrUrl);
+    let apiItem;
+    let turboItem;
+    for (let i = 0; i < 40 && !apiItem; i++) {
+      await sleep(250);
+      const st = await api((id) => chrome.runtime.sendMessage({ type: 'get-state', tabId: id }), sTab);
+      apiItem = st.media.find((m) => m.site === 'youtube' && m.kind === 'direct');
+      turboItem = st.media.find((m) => m.site === 'youtube' && m.captureOnly);
+    }
+    const apiCall = log.find((l) => l.path === '/youtubei/v1/player');
+    check(
+      !!apiItem && !!turboItem && /com\.google\.ios\.youtube/.test(apiCall?.ua ?? ''),
+      `YouTube player API (iOS profile, UA via DNR: ${/ios/.test(apiCall?.ua ?? '')}) -> ${apiItem?.variants?.map((v) => v.label)} + turbo fallback ${!!turboItem}`,
+    );
+    if (apiItem) {
+      await api((id) => chrome.runtime.sendMessage({ type: 'download', mediaId: id }), apiItem.id);
+      let aj;
+      for (let i = 0; i < 60; i++) {
+        await sleep(500);
+        const st = await api((id) => chrome.runtime.sendMessage({ type: 'get-state', tabId: id }), sTab);
+        aj = st.jobs.find((j) => j.media.id === apiItem.id);
+        if (aj && aj.status !== 'running' && aj.status !== 'queued') break;
+      }
+      const cdn = log.filter((l) => l.query === '?yt=ios');
+      check(
+        aj?.status === 'done' && cdn.length > 0 && cdn.every((l) => /com\.google\.ios\.youtube/.test(l.ua)),
+        `YouTube API download merged (${aj?.status} ${aj?.error ?? ''}), ${cdn.length} stream requests carried the iOS UA`,
+      );
+    }
   }
 
   // Hover preview: a short clip built by the engine from the HLS stream.

@@ -11,8 +11,8 @@ import { loadSettings, type Settings } from '../shared/settings';
 import type { HistoryEntry, Job, MediaItem, RequestHeaders, Variant } from '../shared/types';
 import { hostMatches, hostOf, uid } from '../shared/util';
 import { engine, hasOffscreen, onEngineEvent, usesOffscreen } from './engine-client';
-import { clearHeaderRule, pruneHeaderRules, ruleId, setHeaderRule } from './rules';
-import type { SiteMedia } from '../shared/sites';
+import { clearHeaderRule, pruneHeaderRules, ruleId, setHeaderRule, setYoutubeUaRule } from './rules';
+import { vimeo, youtube, youtubePlayerRequest, YT_IOS, type SiteMedia } from '../shared/sites';
 import { applyUpdate, checkForUpdate, scheduleUpdates, updateState } from './update';
 
 // ------------------------------------------------------------------ state
@@ -45,7 +45,7 @@ const ready = (async () => {
       j.error = t('err_interrupted');
     }
   // Rules of analyses/jobs that died with the previous worker would otherwise linger for the session.
-  await pruneHeaderRules(jobs.filter((j) => j.status === 'running').map((j) => `job-${j.id}`));
+  await pruneHeaderRules([...jobs.filter((j) => j.status === 'running').map((j) => `job-${j.id}`), 'youtube-ua']);
   await applyUiMode();
   pump();
 })();
@@ -715,6 +715,14 @@ async function addSiteMedia(tabId: number, frameId: number, items: unknown[]) {
       duration: num(it.duration),
       drm: it.drm === true || undefined,
     };
+    if (it.site === 'vimeo' && http(it.configUrl) && new URL(it.configUrl).hostname === 'player.vimeo.com') {
+      // Only this known endpoint: a page must not make the extension fetch arbitrary URLs.
+      const res = await fetch(it.configUrl, { credentials: 'include' }).catch(() => null);
+      const json = res?.ok ? await res.json().catch(() => null) : null;
+      const found = vimeo(json);
+      if (found.length) await addSiteMedia(tabId, frameId, found);
+      continue;
+    }
     if (http(it.hls)) await addMedia(tabId, frameId, it.hls, 'hls', meta);
     else if (http(it.dash)) await addMedia(tabId, frameId, it.dash, 'dash', meta);
     else if (typeof it.dashXml === 'string' && it.dashXml.length < 4e6)
@@ -736,13 +744,39 @@ async function addSiteMedia(tabId: number, frameId: number, items: unknown[]) {
           size: num(v.size),
         }));
       if (variants.length) await addMedia(tabId, frameId, variants[0].ref, 'direct', { ...meta, variants, size: variants[0].size, analyzed: true });
-    } else if (it.captureOnly === true)
+    } else if (it.captureOnly === true) {
       await addMedia(tabId, frameId, `turbo:${it.key}`, 'mse', {
         ...meta,
         id: `turbo:${tabId}:${it.key.slice(0, 80)}`,
         captureOnly: true,
         mse: { bytes: 0, mimes: [] },
       });
+      if (it.site === 'youtube') await addYoutubeApiMedia(tabId, frameId, it.key, tab.url ?? '');
+    }
+  }
+}
+
+/**
+ * YouTube via its player API (iOS client profile): when the page only offers SABR streams, ask the API
+ * for direct stream URLs, like VDH does. Turbo capture stays available as the fallback.
+ */
+async function addYoutubeApiMedia(tabId: number, frameId: number, key: string, pageUrl: string) {
+  const videoId = /^yt:([\w-]{6,20})$/.exec(key)?.[1];
+  if (!settings.youtubeApi || !videoId) return;
+  const host = new URL(pageUrl).hostname;
+  if (!/(^|\.)youtube(-nocookie)?\.com$/.test(host)) return;
+  // The API is always called on www.youtube.com (the e2e test maps that host to a local server).
+  const origin = `https://www.youtube.com${new URL(pageUrl).port ? `:${new URL(pageUrl).port}` : ''}`;
+  try {
+    await setYoutubeUaRule(YT_IOS.userAgent);
+    const req = youtubePlayerRequest(videoId, origin);
+    const res = await fetch(req.url, { ...req.init, credentials: 'omit' });
+    if (!res.ok) return;
+    const found = youtube(await res.json()).filter((m) => m.variants?.length);
+    for (const m of found) m.key = `${m.key}:api`;
+    if (found.length) await addSiteMedia(tabId, frameId, found);
+  } catch (e) {
+    console.warn('[ReelFetch] YouTube API lookup failed', e);
   }
 }
 

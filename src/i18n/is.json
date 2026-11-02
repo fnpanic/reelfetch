@@ -152,6 +152,7 @@
   "private_browsing_warning": "ReelFetch er ekki virkt í einkagluggum. Kveiktu á þeim valkosti í stillingum viðbótarinnar.",
   "private_browsing_button": "Breyta stillingu einkavafurs",
   "private_browsing_notifications": "Sýna tilkynningar fyrir einkaniðurhal",
+  "youtube_api": "YouTube: sækja straumtengla úr spilara-API YouTube (iOS-biðlarasnið)",
   "err_stalled": "Stöðvað: engin framvinda of lengi. Reyndu aftur eða notaðu túrbó-upptöku.",
   "err_tab_closed": "Flipanum var lokað áður en upptökunni lauk.",
   "update_available": "Ný útgáfa í boði:",
