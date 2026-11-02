@@ -9,6 +9,9 @@ import { Icon } from './Icon';
 
 type View = 'media' | 'downloads' | 'history' | 'settings';
 
+/** Firefox exposes its sidebar API only on the `browser` namespace. */
+const ffSidebar = (globalThis as { browser?: { sidebarAction?: { open(): Promise<void> } } }).browser?.sidebarAction;
+
 export function App({ sidebar }: { sidebar: boolean }) {
   const state = useAppState();
   const [settings, update] = useSettings();
@@ -66,13 +69,13 @@ export function App({ sidebar }: { sidebar: boolean }) {
             </button>
           ))}
         </nav>
-        {!sidebar && chrome.sidePanel?.open && (
+        {!sidebar && (chrome.sidePanel?.open || ffSidebar) && (
           <button
             className="icon-btn"
             title={t('show_in_sidebar')}
             onClick={async () => {
-              const win = await chrome.windows.getCurrent();
-              await chrome.sidePanel.open({ windowId: win.id! });
+              if (ffSidebar) await ffSidebar.open(); // must run directly in the click handler
+              else await chrome.sidePanel.open({ windowId: (await chrome.windows.getCurrent()).id! });
               window.close();
             }}
           >

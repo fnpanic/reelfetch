@@ -41,6 +41,24 @@ beforeAll(async () => {
         );
         return;
       }
+      if (path === '/dash/live.mpd') {
+        // Simulated live DASH: the timeline grows by one segment per refresh, the stream ends at 6.
+        const k = hits.filter((h) => h === '/dash/live.mpd').length;
+        const count = Math.min(6, k + 2);
+        const audioDur = [44032, 45056, 44032, 44032, 44032, 43416];
+        let mpd = await readFile(join(root, 'dash/manifest.mpd'), 'utf8');
+        mpd = mpd
+          .replace('type="static"', count < 6 ? 'type="dynamic" minimumUpdatePeriod="PT0.2S"' : 'type="static"')
+          .replace(/mediaPresentationDuration="[^"]*"/, '')
+          .replace('<S t="0" d="12800" r="5" />', `<S t="0" d="12800" r="${count - 1}" />`)
+          .replace(
+            /<SegmentTimeline>\s*<S t="0" d="44032" \/>[\s\S]*?<\/SegmentTimeline>/,
+            `<SegmentTimeline>${audioDur.slice(0, count).map((d, i) => `<S ${i ? '' : 't="0" '}d="${d}" />`).join('')}</SegmentTimeline>`,
+          );
+        res.setHeader('Content-Type', 'application/dash+xml');
+        res.end(mpd);
+        return;
+      }
       const body = await readFile(join(root, path));
       res.setHeader('Content-Length', body.byteLength);
       res.end(body);
@@ -62,6 +80,7 @@ const settings: EngineSettings = {
   subtitleLangs: [],
   downloadSubtitles: false,
   preferMkv: false,
+  audioFormat: 'original',
 };
 
 function media(kind: MediaItem['kind'], path: string): MediaItem {
@@ -140,6 +159,40 @@ describe('engine', () => {
     const out = await download(job(media('hls', 'live.m3u8')), settings, ctl());
     const info = await inspect(out.files[0].blob);
     expect(info.duration).toBeGreaterThan(3.5);
+  });
+
+  it('rebases timestamps across HLS discontinuities', async () => {
+    const out = await download(job(media('hls', 'discontinuity.m3u8')), settings, ctl());
+    expect(out.files).toHaveLength(1);
+    const info = await inspect(out.files[0].blob);
+    expect(info.duration).toBeGreaterThan(5.5); // 2 x 3 s, not 3 s of overlapping pieces
+    expect(info.duration).toBeLessThan(7);
+  });
+
+  it('joins multi-period DASH', async () => {
+    const a = await analyze(media('dash', 'dash/multiperiod.mpd'));
+    expect(a.duration).toBe(12);
+    const out = await download(job(media('dash', 'dash/multiperiod.mpd')), settings, ctl());
+    const info = await inspect(out.files[0].blob);
+    expect(info.video).toEqual(['avc']);
+    expect(info.duration).toBeGreaterThan(11.5);
+  });
+
+  it('records live DASH until the stream ends', async () => {
+    const a = await analyze(media('dash', 'dash/live.mpd'));
+    expect(a.live).toBe(true);
+    const progress: string[] = [];
+    const out = await download(job(media('dash', 'dash/live.mpd')), settings, {
+      ...ctl(),
+      onProgress: (p) => progress.push(p.phase ?? ''),
+    });
+    expect(progress).toContain('recording');
+    const info = await inspect(out.files[0].blob);
+    expect(info.video).toEqual(['avc']);
+    expect(info.audio).toEqual(['aac']);
+    // Joins at the live edge (last 3 segments of the 5 then listed) and follows until the end: 4 x 1 s.
+    expect(info.duration).toBeGreaterThan(3.5);
+    expect(info.duration).toBeLessThan(5);
   });
 
   it('keeps a live recording when a segment fails', async () => {

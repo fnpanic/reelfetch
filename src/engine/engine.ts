@@ -8,10 +8,11 @@ import { sleep } from '../shared/util';
 import { decryptSegment, fetchBytes, fetchText } from './net';
 import { createSpool, sniffExt, type Spool } from './spool';
 import { remux } from './mux';
+import { convertToMp3 } from './mp3';
 
 export type EngineSettings = Pick<
   Settings,
-  'preferredQuality' | 'audioLangs' | 'subtitleLangs' | 'downloadSubtitles' | 'preferMkv'
+  'preferredQuality' | 'audioLangs' | 'subtitleLangs' | 'downloadSubtitles' | 'preferMkv' | 'audioFormat'
 >;
 
 export interface Control {
@@ -112,14 +113,31 @@ export async function analyze(media: MediaItem, signal?: AbortSignal): Promise<P
 
 // ---------------------------------------------------------------- planning
 
+/** One refresh of a live manifest. */
+interface LivePoll {
+  segments: Segment[];
+  ended: boolean;
+  /** Seconds until the next refresh. */
+  wait: number;
+}
+
 interface Track {
   name: 'video' | 'audio' | 'subs';
   /** Static segment list (VOD). */
   segments?: Segment[];
-  /** Live HLS media playlist to poll. */
+  /** Live stream: manifest URL and how to poll it. */
   liveUrl?: string;
+  poll?: (signal: AbortSignal) => Promise<LivePoll>;
+  /** Live DASH starts at the live edge (last N segments) instead of the whole time-shift window. */
+  startWindow?: number;
   lang?: string;
 }
+
+const hlsPoller = (url: string) => async (signal: AbortSignal): Promise<LivePoll> => {
+  const m = await loadMedia(url, signal);
+  if (m.drm) throw new DrmError();
+  return { segments: m.segments, ended: m.endList, wait: Math.max(1, (m.targetDuration || 4) / 2) };
+};
 
 async function loadMedia(url: string, signal: AbortSignal): Promise<HlsMedia & { url: string }> {
   const r = await fetchText(url, signal);
@@ -164,7 +182,7 @@ async function planHls(job: Job, s: EngineSettings, signal: AbortSignal): Promis
   const add = async (name: Track['name'], url: string, lang?: string) => {
     const m = await loadMedia(url, signal);
     if (m.drm) throw new DrmError();
-    tracks.push(m.endList ? { name, segments: m.segments, lang } : { name, liveUrl: m.url, lang });
+    tracks.push(m.endList ? { name, segments: m.segments, lang } : { name, liveUrl: m.url, poll: hlsPoller(m.url), lang });
   };
   if (audioOnly && audioRendition?.uri) videoUrl = null;
   if (videoUrl) await add('video', videoUrl);
@@ -176,8 +194,8 @@ async function planHls(job: Job, s: EngineSettings, signal: AbortSignal): Promis
 async function planDash(job: Job, s: EngineSettings, signal: AbortSignal): Promise<Track[]> {
   const r = await fetchText(job.media.url, signal);
   const m = parseMpd(r.text, r.url);
-  if (m.live) throw new Error('Live DASH streams are not supported yet - try MSE capture instead.');
-  const reps = m.periods.flatMap((p) => p.reps);
+  // Live: choose from the current period only; the manifest is re-polled while recording.
+  const reps = m.live ? (m.periods.at(-1)?.reps ?? []) : m.periods.flatMap((p) => p.reps);
   const pick = (type: DashRep['contentType']) => reps.filter((x) => x.contentType === type);
   const audioOnly = !!job.options.audioOnly;
   const tracks: Track[] = [];
@@ -186,7 +204,7 @@ async function planDash(job: Job, s: EngineSettings, signal: AbortSignal): Promi
   if (!audioOnly && videos.length) {
     const v = videos.find((x) => x.id === job.options.variantId) ?? pickVariant(videos, s.preferredQuality)!;
     if (v.drm) throw new DrmError();
-    tracks.push({ name: 'video', segments: joinPeriods(m, v) });
+    tracks.push(m.live ? dashLive(r.url, v, 'video') : { name: 'video', segments: joinPeriods(m, v) });
   }
   const audios = pick('audio');
   if (audios.length) {
@@ -195,15 +213,35 @@ async function planDash(job: Job, s: EngineSettings, signal: AbortSignal): Promi
       .filter((a) => a.lang === lang)
       .sort((a, b) => (b.bandwidth ?? 0) - (a.bandwidth ?? 0))[0];
     if (best.drm) throw new DrmError();
-    tracks.push({ name: 'audio', segments: joinPeriods(m, best), lang });
+    tracks.push(m.live ? { ...dashLive(r.url, best, 'audio'), lang } : { name: 'audio', segments: joinPeriods(m, best), lang });
   }
   const texts = pick('text');
-  if (s.downloadSubtitles && texts.length && !audioOnly) {
+  if (s.downloadSubtitles && texts.length && !audioOnly && !m.live) {
     const t = s.subtitleLangs.length ? pickByLang(texts, s.subtitleLangs)! : texts[0];
     tracks.push({ name: 'subs', segments: joinPeriods(m, t), lang: t.lang });
   }
   if (!tracks.length) throw new Error('No downloadable representation found');
   return tracks;
+}
+
+function dashLive(url: string, wanted: DashRep, name: Track['name']): Track {
+  return {
+    name,
+    liveUrl: url,
+    startWindow: 3,
+    poll: async (signal) => {
+      const r = await fetchText(url, signal);
+      const m = parseMpd(r.text, r.url);
+      const reps = (m.periods.at(-1)?.reps ?? []).filter((x) => x.contentType === wanted.contentType);
+      const rep =
+        reps.find((x) => x.id === wanted.id) ??
+        reps.sort((a, b) => Math.abs((a.bandwidth ?? 0) - (wanted.bandwidth ?? 0)) - Math.abs((b.bandwidth ?? 0) - (wanted.bandwidth ?? 0)))[0];
+      if (rep?.drm) throw new DrmError();
+      const segs = rep?.segments ?? [];
+      const segDur = segs.at(-1)?.duration || 2;
+      return { segments: segs, ended: !m.live, wait: Math.max(1, Math.min(m.minimumUpdatePeriod ?? segDur, segDur)) };
+    },
+  };
 }
 
 // ---------------------------------------------------------------- downloading
@@ -261,24 +299,33 @@ async function downloadSegments(
   }
 }
 
-async function recordLive(url: string, spool: Spool, ctl: Control, c: Counter, report: () => void, isVideo: boolean) {
-  let lastSeq = -1;
+async function recordLive(t: Track, spool: Spool, ctl: Control, c: Counter, report: () => void, isVideo: boolean) {
+  const seen = new Set<string>();
+  const segKey = (x: Segment) => `${x.url}#${x.byteRange?.offset ?? ''}`;
   const state = { mapKey: '' };
   const hosts = new Set<string>();
+  let first = true;
   while (!ctl.stopped()) {
-    let m: Awaited<ReturnType<typeof loadMedia>>;
+    let poll: LivePoll;
     try {
-      m = await loadMedia(url, ctl.signal);
-      if (m.drm) throw new DrmError();
-      const fresh = m.segments.filter((s) => s.seq > lastSeq);
+      poll = await t.poll!(ctl.signal);
+      let fresh = poll.segments.filter((x) => !seen.has(segKey(x)));
+      if (first && t.startWindow) {
+        fresh.slice(0, -t.startWindow).forEach((x) => seen.add(segKey(x)));
+        fresh = fresh.slice(-t.startWindow);
+      }
+      first = false;
       if (fresh.length) {
         // Segments may move to new CDN hosts mid-stream; they need the Referer rule too.
-        const added = fresh.flatMap((s) => [s.url, s.map?.url, s.key?.uri]).filter((u): u is string => !!u)
-          .map((u) => new URL(u).hostname).filter((h) => !hosts.has(h) && hosts.add(h));
+        const added = fresh
+          .flatMap((x) => [x.url, x.map?.url, x.key?.uri])
+          .filter((u): u is string => !!u)
+          .map((u) => new URL(u).hostname)
+          .filter((h) => !hosts.has(h) && hosts.add(h));
         if (added.length) await ctl.prepare?.([...hosts]);
         c.segmentsTotal += fresh.length;
         await downloadSegments(fresh, spool, ctl, c, report, state, isVideo);
-        lastSeq = fresh[fresh.length - 1].seq;
+        fresh.forEach((x) => seen.add(segKey(x)));
       }
     } catch (e) {
       // Don't throw away a recording because the stream ended or a segment expired: finalize what we have.
@@ -286,9 +333,9 @@ async function recordLive(url: string, spool: Spool, ctl: Control, c: Counter, r
       console.warn('[ReelFetch] live recording ended early', e);
       break;
     }
-    if (m.endList) break;
-    const wait = Math.max(1, (m.targetDuration || 4) / 2) * 1000;
-    for (let t = 0; t < wait && !ctl.stopped(); t += 250) {
+    if (poll.ended) break;
+    const wait = poll.wait * 1000;
+    for (let w = 0; w < wait && !ctl.stopped(); w += 250) {
       ctl.signal.throwIfAborted();
       await sleep(250);
     }
@@ -371,7 +418,7 @@ export async function download(job: Job, s: EngineSettings, ctl: Control): Promi
     await ctl.prepare?.([...hosts]);
 
     const raw = new Map<Track, Spool>();
-    if (tracks.some((t) => t.liveUrl)) phase = 'recording';
+    if (tracks.some((t) => t.poll)) phase = 'recording';
     c.segmentsTotal = tracks.reduce((n, t) => n + (t.segments?.length ?? 0), 0);
     report(true);
 
@@ -381,7 +428,7 @@ export async function download(job: Job, s: EngineSettings, ctl: Control): Promi
         raw.set(t, sp);
         const isVideo = t.name === 'video' || !tracks.some((x) => x.name === 'video');
         if (job.media.kind === 'direct') await downloadDirect(job.media.url, sp, ctl, c, report);
-        else if (t.liveUrl) await recordLive(t.liveUrl, sp, ctl, c, report, isVideo);
+        else if (t.poll) await recordLive(t, sp, ctl, c, report, isVideo);
         else await downloadSegments(t.segments!, sp, ctl, c, report, { mapKey: '' }, isVideo);
       }),
     );
@@ -412,6 +459,20 @@ export async function download(job: Job, s: EngineSettings, ctl: Control): Promi
       await out.remove();
       if (ctl.signal.aborted) throw e;
       console.warn('[ReelFetch] remux failed, delivering raw tracks', e);
+    }
+    if (muxed && job.options.audioOnly && s.audioFormat === 'mp3' && files[0].ext !== 'mp3') {
+      // Transcode (replaces the companion-app conversion of the original). Errors fail the job:
+      // silently handing over a non-MP3 file would hide the problem.
+      phase = 'convert';
+      report(true);
+      const mp3 = await temp('mp3');
+      try {
+        await convertToMp3(files[0].blob, mp3.sink(), ctl.signal);
+      } catch (e) {
+        throw new Error(`MP3 conversion failed: ${e instanceof Error ? e.message : String(e)}`);
+      }
+      files[0] = { blob: await mp3.file(), ext: 'mp3' };
+      out.size = mp3.size;
     }
     if (!muxed) {
       // Fallback: hand over the raw streams (e.g. a .ts file) which every player can open.

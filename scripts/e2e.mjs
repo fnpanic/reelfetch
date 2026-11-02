@@ -47,6 +47,10 @@ const server = createServer(async (req, res) => {
   });
 </script>`);
   }
+  if (path === '/audio.html') {
+    res.setHeader('Content-Type', 'text/html');
+    return res.end(`<!doctype html><title>Opus Song</title><video src="/mse.webm" muted preload="none"></video>`);
+  }
   if (path === '/thumb.png') {
     res.setHeader('Content-Type', 'image/png');
     return res.end(await readFile(join(root, 'public', 'icons', '128.png')));
@@ -209,6 +213,39 @@ try {
       ? execFileSync(ffprobe, ['-v', 'error', '-show_entries', 'stream=codec_name:format=duration', '-of', 'compact', p], { encoding: 'utf8' }).trim().replace(/\r?\n/g, ' | ')
       : '';
     check(/vp9/.test(probe) && /opus/.test(probe) && d.suggestedFilename().endsWith('.webm'), `MSE capture saved as ${d.suggestedFilename()} ${probe}`);
+  }
+
+  // Audio-only + MP3 transcoding (WebCodecs decode + LAME worker inside the offscreen document).
+  await api(async () => {
+    const { settings } = await chrome.storage.local.get('settings');
+    await chrome.storage.local.set({ settings: { ...settings, audioFormat: 'mp3' } });
+    await chrome.runtime.sendMessage({ type: 'settings-changed' });
+  });
+  const audioPage = await ctx.newPage();
+  await audioPage.goto(`${base}/audio.html`);
+  const audioTab = await api((u) => chrome.tabs.query({ url: u }).then((t) => t[0].id), `${base}/audio.html`);
+  let webm;
+  for (let i = 0; i < 40 && !webm; i++) {
+    await sleep(250);
+    const s = await api((id) => chrome.runtime.sendMessage({ type: 'get-state', tabId: id }), audioTab);
+    webm = s.media.find((m) => m.url.endsWith('mse.webm'));
+  }
+  check(!!webm, 'WebM <video> detected');
+  if (webm) {
+    await api((id) => chrome.runtime.sendMessage({ type: 'download', mediaId: id, audioOnly: true }), webm.id);
+    let job;
+    for (let i = 0; i < 60; i++) {
+      await sleep(500);
+      const s = await api((id) => chrome.runtime.sendMessage({ type: 'get-state', tabId: id }), audioTab);
+      job = s.jobs.find((j) => j.media.id === webm.id);
+      if (job && job.status !== 'running' && job.status !== 'queued') break;
+    }
+    const [d] = job?.downloadIds?.length ? await api((id) => chrome.downloads.search({ id }), job.downloadIds[0]) : [];
+    const probe =
+      d?.filename && existsSync(d.filename) && existsSync(ffprobe)
+        ? execFileSync(ffprobe, ['-v', 'error', '-show_entries', 'stream=codec_name:format=duration', '-of', 'compact', d.filename], { encoding: 'utf8' }).trim().replace(/\r?\n/g, ' | ')
+        : '';
+    check(job?.status === 'done' && /codec_name=mp3/.test(probe) && !/vp9/.test(probe), `MP3 conversion: ${job?.status} ${probe} ${job?.error ?? ''}`);
   }
 } finally {
   await ctx.close();

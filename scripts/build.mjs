@@ -73,6 +73,8 @@ const common = {
   icons,
   action: { default_icon: icons, default_title: 'ReelFetch', default_popup: 'ui/popup.html' },
   host_permissions: ['<all_urls>'],
+  // WASM is needed by the MP3 encoder (LAME); no other relaxation.
+  content_security_policy: { extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'" },
   optional_permissions: ['downloads.open'],
   content_scripts: [{ matches: ['<all_urls>'], js: ['content/page.js'], run_at: 'document_idle', all_frames: true }],
   commands: {
@@ -109,7 +111,8 @@ const manifests = {
     permissions: basePerms,
     sidebar_action: { default_panel: 'ui/sidebar.html', default_title: 'ReelFetch', default_icon: icons, open_at_install: false },
     browser_specific_settings: {
-      gecko: { id: 'reelfetch@reelfetch.app', strict_min_version: '128.0', data_collection_permissions: { required: ['none'] } },
+      gecko: { id: 'reelfetch@reelfetch.app', strict_min_version: '140.0', data_collection_permissions: { required: ['none'] } },
+      gecko_android: { strict_min_version: '142.0' },
     },
   },
 };

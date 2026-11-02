@@ -76,7 +76,7 @@ export interface Progress {
   segmentsTotal?: number;
   /** Seconds recorded (live). */
   recorded?: number;
-  phase?: 'download' | 'mux' | 'save' | 'recording';
+  phase?: 'download' | 'mux' | 'convert' | 'save' | 'recording';
 }
 
 export interface HistoryEntry {

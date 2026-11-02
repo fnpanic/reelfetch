@@ -17,7 +17,7 @@ Built with React, TypeScript, Vite and [mediabunny](https://mediabunny.dev) (a p
    [Releases](../../releases) page (or build it yourself, see below).
 2. **Chrome / Edge / Brave / Opera:** unzip it, open `chrome://extensions` (`edge://extensions`), switch on
    **Developer mode**, click **Load unpacked** and select the unzipped folder.
-3. **Firefox (128+):** open `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on…** → pick the zip.
+3. **Firefox (140+):** open `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on…** → pick the zip.
    To install permanently, sign the zip at [addons.mozilla.org](https://addons.mozilla.org/developers/) (unlisted is
    fine) or use Firefox Developer Edition/Nightly with `xpinstall.signatures.required = false`.
    On first open, click **Grant access** so ReelFetch can see website traffic.
@@ -59,7 +59,8 @@ analysis with REA).
 | HLS AES-128 encrypted streams | ✅ | ✅ (WebCrypto) |
 | HLS byte ranges, `EXT-X-MAP` (fMP4), `EXT-X-DEFINE`, discontinuities | ✅ | ✅ |
 | DASH SegmentTemplate (`$Number$`/`$Time$`/timeline), SegmentList, SegmentBase, multi-period | ✅ | ✅ |
-| Live HLS recording with stop | ✅ | ✅ |
+| Live HLS and live DASH recording with stop | ✅ | ✅ (joins at the live edge; finalizes even if the stream drops) |
+| HLS discontinuities / multi-period DASH (stitched ads) | ✅ | ✅ (timestamps rebased per track) |
 | DRM detection and refusal | ✅ | ✅ (HLS key formats, DASH `ContentProtection`, EME in the page) |
 | Preferred audio and subtitle languages, subtitle download | ✅ | ✅ (WebVTT sidecar file) |
 | Download queue, max concurrent downloads, stop/retry, open file / show folder | ✅ | ✅ |
@@ -77,14 +78,19 @@ analysis with REA).
 | Replay page Referer/Origin to protected CDNs | ✅ | ✅ (session `declarativeNetRequest` rules) |
 | Record any MSE-fed stream (no manifest needed) | ❌ | ✅ |
 | Site-specific extractors (YouTube, Facebook, Vimeo, VK, OK, Bilibili, Kick, …) | ✅ | ❌, see below |
-| Companion app (CoApp/ffmpeg) for transcoding, e.g. to MP3/AVI | ✅ | ❌ remux only (no re-encoding) |
+| Conversion to MP3 (VDH: companion app with ffmpeg) | ✅ | ✅ built in, no extra app (WebCodecs decode + LAME/WASM) |
+| Other transcodes via the companion app (e.g. AVI, resize) | ✅ | ❌ (lossless remux to MP4/WebM/MKV instead) |
 | Premium/licence, account | ✅ | not applicable (free) |
-| Languages | 33 | English, German |
+| Languages | 33 | the same 33 (en, de hand-written; others machine-translated, review welcome) |
 
 **Why no site-specific extractors?** VDH ships per-site scripts that scrape player internals (e.g. YouTube signature
-deciphering). They break whenever the site changes, and the Chrome Web Store forbids YouTube downloaders. ReelFetch
-relies on generic network detection instead, which covers every site that streams plain HLS, DASH or files, plus MSE
-capture as the catch-all.
+deciphering). That is a circumvention of the site's protection, breaks whenever the site changes, and the Chrome Web
+Store forbids YouTube downloaders. ReelFetch relies on generic network detection instead, which covers every site
+that streams plain HLS, DASH or files, plus MSE capture as the catch-all for players that hide their streams.
+
+**"Any stream" - what that means here:** every unprotected stream a browser can play is downloadable, either via its
+manifest/file or via MSE capture of what the player plays. DRM-protected media (Widevine, PlayReady, FairPlay,
+`SAMPLE-AES`) is the deliberate exception, exactly as in VDH: decrypting it would mean circumventing copy protection.
 
 ## Architecture
 
@@ -97,10 +103,12 @@ src/
     rules.ts       session DNR rules that replay Referer/Origin for the extension's own requests
   engine/          stream pipeline (runs in a DOM context)
     engine.ts      manifest analysis, track planning (HLS/DASH), ordered parallel segment download,
-                   live recording, subtitle joining, raw-stream fallback
+                   live recording (HLS + DASH), subtitle joining, MP3 option, raw-stream fallback
     net.ts         fetch with retries and byte ranges, AES-128 decryption
     spool.ts       temp storage in OPFS (multi-GB safe), memory fallback
-    mux.ts         timestamp-interleaved packet remux of 1..n inputs into MP4/WebM/MKV/M4A/…
+    mux.ts         timestamp-interleaved packet remux of 1..n inputs into MP4/WebM/MKV/M4A/…,
+                   with rebasing across discontinuities
+    mp3.ts         MP3 transcoding (engine only, keeps LAME out of content scripts)
     host.ts        message handler + job registry (cancel/stop/release)
   offscreen/       Chrome offscreen document hosting the engine
   content/
@@ -109,7 +117,7 @@ src/
     mse-save.ts    injected on demand: remuxes captured buffers and saves them
   shared/          pure logic: HLS + DASH parsers, detection, quality picking, naming, settings, types
   ui/              React popup/sidebar (Media, Downloads, History, Settings)
-  i18n/            en.json, de.json (compiled to _locales by the build)
+  i18n/            33 locales as flat JSON (compiled to _locales by the build)
 ```
 
 How a download works: the background picks the job off the queue → a session DNR rule replays the page's Referer →
@@ -123,7 +131,9 @@ Plain files skip the engine and go straight to the browser's download manager (r
 ## Development
 
 ```bash
-npm test             # unit + engine integration tests (real HLS/DASH fixtures over HTTP)
+npm test             # unit + engine integration tests (real HLS/DASH fixtures over HTTP) + locale checks
+RF_NETWORK=1 npm test  # also checks public reference streams (DASH-IF livesim2 live DASH, Mux HLS)
+npx web-ext lint --source-dir dist/firefox   # Mozilla's add-on linter on the Firefox build
 npm run typecheck
 npm run build
 npm run e2e          # loads dist/chrome into Chromium and runs detection/download/capture end-to-end
@@ -136,13 +146,13 @@ Test fixtures in `test/fixtures` were generated with ffmpeg (see `test/fixtures/
 
 ## Known limitations
 
-- Live DASH is not supported (live HLS is); use stream capture for such players.
 - MSE capture records only what is played. Seeking while recording can produce gaps.
 - HLS `SAMPLE-AES` and any Widevine/PlayReady/FairPlay content is DRM and is refused by design.
-- Multi-period DASH and HLS discontinuities (e.g. stitched ads) are concatenated without timestamp rebasing; if the
-  remux rejects them, the raw stream is saved instead.
-- Firefox: unsigned add-ons only load temporarily in release builds (see Install). The Firefox build is generated
-  and type-checked, but only the Chrome build is covered by the automated browser test.
+- Live recordings start at the live edge (like a player), not at the beginning of the DVR window.
+- Audio-only MP3 conversion applies to stream/file downloads; MSE captures are saved in their original codec.
+- Firefox: unsigned add-ons only load temporarily in release builds (see Install). The Firefox build passes
+  `web-ext lint` with 0 errors (remaining warnings are feature-detected Chrome-only APIs), but the automated
+  in-browser test runs on Chromium only.
 
 ## License
 

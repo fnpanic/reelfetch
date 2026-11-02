@@ -21,6 +21,7 @@ function statusText(j: Job): string {
   if (j.status === 'error') return j.error ?? t('download_failed');
   if (p.phase === 'recording') return `${t('status_recording')} ${formatDuration(p.recorded ?? 0)} · ${formatBytes(p.bytes)}`;
   if (p.phase === 'mux') return t('status_muxing');
+  if (p.phase === 'convert') return t('status_converting');
   if (p.phase === 'save') return t('status_saving');
   const seg = p.segmentsTotal ? `${p.segments ?? 0}/${p.segmentsTotal}` : '';
   return [t('status_downloading'), formatBytes(p.bytes), p.total ? `/ ${formatBytes(p.total)}` : '', seg].filter(Boolean).join(' ');

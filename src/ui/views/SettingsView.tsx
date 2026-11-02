@@ -119,6 +119,7 @@ export function SettingsView({ settings: s, update }: Props) {
         <Text label={t('filename_template')} value={s.filenameTemplate} placeholder="{title}" onCommit={(v) => update({ filenameTemplate: v || '{title}' })} />
         <p className="hint">{t('filename_template_hint')}</p>
         <Check label={t('prefer_mkv')} k="preferMkv" s={s} update={update} />
+        <Select label={t('audio_format')} k="audioFormat" s={s} update={update} options={[['original', t('audio_format_original')], ['mp3', 'MP3']]} />
         <Check label={t('always_download_as_menu')} k="alwaysSaveAs" s={s} update={update} />
         <Check label={t('show_notification')} k="notifyOnComplete" s={s} update={update} />
         <Check label={t('transient_history_description')} k="showCompleted" s={s} update={update} />

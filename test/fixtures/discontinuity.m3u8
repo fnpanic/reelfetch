@@ -1,0 +1,17 @@
+#EXTM3U
+#EXT-X-TARGETDURATION:1
+#EXT-X-KEY:METHOD=AES-128,URI="hls-ts-aes/key.bin",IV=0x00112233445566778899aabbccddeeff
+#EXTINF:1,
+hls-ts-aes/seg000.ts
+#EXTINF:1,
+hls-ts-aes/seg001.ts
+#EXTINF:1,
+hls-ts-aes/seg002.ts
+#EXT-X-DISCONTINUITY
+#EXTINF:1,
+hls-ts-aes/seg000.ts
+#EXTINF:1,
+hls-ts-aes/seg001.ts
+#EXTINF:1,
+hls-ts-aes/seg002.ts
+#EXT-X-ENDLIST

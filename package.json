@@ -13,6 +13,7 @@
     "icons": "node scripts/make-icons.mjs"
   },
   "dependencies": {
+    "@mediabunny/mp3-encoder": "^1.65.0",
     "mediabunny": "^1.65.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
@@ -27,6 +28,7 @@
     "playwright-core": "^1.64.1",
     "typescript": "^7.0.2",
     "vite": "^8.3.5",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.0",
+    "web-ext": "^10.8.0"
   }
 }

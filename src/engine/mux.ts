@@ -96,11 +96,25 @@ export async function remux(
     const lanes = await Promise.all(
       tracks.map(async (t) => {
         const it = new EncodedPacketSink(t).packets();
-        const first = await it.next();
+        // Rebase timestamps so concatenated pieces (HLS discontinuities, DASH periods, ad splices)
+        // play one after another instead of overlapping. B-frame reordering stays well under 1 s.
+        let shift = 0;
+        let end = -Infinity;
+        const read = async (): Promise<EncodedPacket | null> => {
+          const n = await it.next();
+          if (n.done) return null;
+          let ts = n.value.timestamp + shift;
+          if (end !== -Infinity && (ts < end - 1 || ts > end + 10)) {
+            shift += end - ts;
+            ts = end;
+          }
+          end = Math.max(end, ts + (n.value.duration || 0));
+          return ts === n.value.timestamp ? n.value : n.value.clone({ timestamp: ts });
+        };
         return {
           track: t,
-          it,
-          cur: first.done ? null : first.value,
+          read,
+          cur: await read(),
           src: (t === video ? vSrc : aSrc)!,
           meta: { decoderConfig: (await t.getDecoderConfig()) ?? undefined } as Record<string, unknown> | undefined,
         };
@@ -118,8 +132,7 @@ export async function remux(
       await (lane.src as EncodedVideoPacketSource).add(pkt, lane.meta as never);
       lane.meta = undefined;
       done += p.byteLength;
-      const n = await lane.it.next();
-      lane.cur = n.done ? null : n.value;
+      lane.cur = await lane.read();
       if (opts.onProgress && done - lastReport > totalBytes / 100) {
         lastReport = done;
         opts.onProgress(Math.min(1, done / totalBytes));

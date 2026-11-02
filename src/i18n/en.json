@@ -118,5 +118,8 @@
   "use_sidebar": "Sidebar",
   "version_title": "Version",
   "waiting_for_media": "Waiting for media…",
-  "warn_drm_tooltip": "DRM detected"
+  "warn_drm_tooltip": "DRM detected",
+  "audio_format": "Audio-only format",
+  "audio_format_original": "Original (no re-encoding)",
+  "status_converting": "Converting to MP3…"
 }

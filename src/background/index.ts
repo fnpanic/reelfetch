@@ -323,6 +323,7 @@ async function startJob(j: Job) {
       subtitleLangs: settings.subtitleLangs,
       downloadSubtitles: settings.downloadSubtitles,
       preferMkv: settings.preferMkv,
+      audioFormat: settings.audioFormat,
     },
   });
   if (j.status !== 'running') await engine({ op: 'cancel', jobId: j.id }).catch(() => {});

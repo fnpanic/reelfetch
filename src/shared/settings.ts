@@ -11,6 +11,8 @@ export interface Settings {
   uiMode: 'popup' | 'sidebar';
   preferredQuality: 'highest' | '1080' | '720' | '480';
   preferMkv: boolean;
+  /** Audio-only downloads: keep the original codec (remux) or transcode to MP3. */
+  audioFormat: 'original' | 'mp3';
   alwaysSaveAs: boolean;
   notifyOnComplete: boolean;
   contextMenu: boolean;
@@ -38,6 +40,7 @@ export const DEFAULT_SETTINGS: Settings = {
   uiMode: 'popup',
   preferredQuality: '1080',
   preferMkv: false,
+  audioFormat: 'original',
   alwaysSaveAs: false,
   notifyOnComplete: true,
   contextMenu: true,

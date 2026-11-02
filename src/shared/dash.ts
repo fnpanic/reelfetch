@@ -23,6 +23,8 @@ export interface DashPeriod {
 
 export interface DashManifest {
   live: boolean;
+  /** Seconds between manifest refreshes for live streams. */
+  minimumUpdatePeriod?: number;
   duration?: number;
   drm: boolean;
   periods: DashPeriod[];
@@ -87,12 +89,21 @@ function mergedTemplate(levels: (Element | undefined)[]) {
   return found ? { attrs, timeline } : undefined;
 }
 
+/** Wall-clock context for live (type="dynamic") manifests without a SegmentTimeline. */
+interface LiveClock {
+  availabilityStart: number; // ms epoch
+  periodStart: number; // s
+  timeShift: number; // s
+  now: number; // ms epoch
+}
+
 function templateSegments(
   tpl: { attrs: Record<string, string>; timeline?: Element },
   repId: string,
   bandwidth: number | undefined,
   base: string,
   periodDuration: number | undefined,
+  live?: LiveClock,
 ): Segment[] {
   const a = tpl.attrs;
   const timescale = num(a.timescale) ?? 1;
@@ -122,6 +133,13 @@ function templateSegments(
       if (r < 0) r = isFinite(end) ? Math.ceil((end - t) / d) - 1 : 0;
       for (let i = 0; i <= r; i++, n++, t += d) push(n, t, d);
     }
+  } else if (a.duration && live) {
+    // Number-based live: segments that are fully available now, within the time-shift window.
+    const d = Number(a.duration);
+    const elapsed = (live.now - live.availabilityStart) / 1000 - live.periodStart;
+    const last = Math.floor((elapsed * timescale) / d) - 1;
+    const first = Math.max(0, last - Math.floor((live.timeShift * timescale) / d));
+    for (let i = first; i <= last; i++) push(startNumber + i, pto + i * d, d);
   } else if (a.duration && periodDuration != null) {
     const d = Number(a.duration);
     const count = Math.ceil((periodDuration * timescale) / d - 1e-9);
@@ -157,11 +175,13 @@ function contentTypeOf(as: Element, rep: Element): DashContent | null {
   return null;
 }
 
-export function parseMpd(xml: string, manifestUrl: string): DashManifest {
+export function parseMpd(xml: string, manifestUrl: string, now = Date.now()): DashManifest {
   const doc = new DOMParser().parseFromString(xml, 'application/xml');
   const mpd = doc.documentElement;
   if (!mpd || mpd.localName !== 'MPD') throw new Error('Not a DASH manifest');
   const live = mpd.getAttribute('type') === 'dynamic';
+  const ast = Date.parse(mpd.getAttribute('availabilityStartTime') ?? '');
+  const timeShift = parseIsoDuration(mpd.getAttribute('timeShiftBufferDepth')) ?? 60;
   const total = parseIsoDuration(mpd.getAttribute('mediaPresentationDuration'));
   const periodEls = kids(mpd, 'Period');
   let manifestDrm = false;
@@ -184,7 +204,14 @@ export function parseMpd(xml: string, manifestUrl: string): DashManifest {
         const tpl = mergedTemplate([p, as, rep]);
         const list = kid(rep, 'SegmentList') ?? kid(as, 'SegmentList') ?? kid(p, 'SegmentList');
         const segments = tpl
-          ? templateSegments(tpl, id, bandwidth, base, duration)
+          ? templateSegments(
+              tpl,
+              id,
+              bandwidth,
+              base,
+              live ? undefined : duration,
+              live && !isNaN(ast) ? { availabilityStart: ast, periodStart: start, timeShift, now } : undefined,
+            )
           : list
             ? listSegments(list, base)
             : [{ url: base, duration: duration ?? 0, seq: 0 }];
@@ -207,7 +234,13 @@ export function parseMpd(xml: string, manifestUrl: string): DashManifest {
     return { duration, reps };
   });
   const duration = total ?? periods.reduce((s, p) => s + (p.duration ?? 0), 0);
-  return { live, duration: duration || undefined, drm: manifestDrm, periods };
+  return {
+    live,
+    minimumUpdatePeriod: parseIsoDuration(mpd.getAttribute('minimumUpdatePeriod')),
+    duration: live ? undefined : duration || undefined,
+    drm: manifestDrm,
+    periods,
+  };
 }
 
 /**

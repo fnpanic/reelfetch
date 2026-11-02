@@ -118,5 +118,8 @@
   "use_sidebar": "Seitenleiste",
   "version_title": "Version",
   "waiting_for_media": "Warte auf Medien…",
-  "warn_drm_tooltip": "DRM erkannt"
+  "warn_drm_tooltip": "DRM erkannt",
+  "audio_format": "Format bei Nur-Audio",
+  "audio_format_original": "Original (ohne Neukodierung)",
+  "status_converting": "Wird in MP3 umgewandelt…"
 }
