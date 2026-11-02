@@ -164,5 +164,6 @@
   "update_auto": "Pasang pembaruan secara otomatis",
   "update_busy": "Selesaikan atau batalkan unduhan yang sedang berjalan terlebih dahulu.",
   "updates_title": "Pembaruan",
-  "update_manual_hint": "Unduh penginstal baru dan jalankan untuk memperbarui."
+  "update_manual_hint": "Unduh penginstal baru dan jalankan untuk memperbarui.",
+  "turbo_partial": "Sebagian: situs menghentikan pemutaran, disimpan"
 }

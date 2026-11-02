@@ -164,5 +164,6 @@
   "update_auto": "업데이트 자동 설치",
   "update_busy": "먼저 진행 중인 다운로드를 완료하거나 취소하세요.",
   "updates_title": "업데이트",
-  "update_manual_hint": "새 설치 프로그램을 다운로드하여 실행하면 업데이트됩니다."
+  "update_manual_hint": "새 설치 프로그램을 다운로드하여 실행하면 업데이트됩니다.",
+  "turbo_partial": "일부만: 사이트가 재생을 중지함, 저장됨"
 }

@@ -59,6 +59,7 @@ export function JobsView({ jobs }: { jobs: Job[] }) {
                   />
                 </div>
                 <div className={j.status === 'error' ? 'meta error-text' : 'meta'}>{statusText(j)}</div>
+                {j.warning && j.status === 'done' && <div className="meta warn-text">{j.warning}</div>}
               </div>
               <div className="actions row-actions">
                 {j.status === 'running' && j.progress.phase === 'recording' && (

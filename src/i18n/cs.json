@@ -164,5 +164,6 @@
   "update_auto": "Instalovat aktualizace automaticky",
   "update_busy": "Nejprve dokončete nebo zrušte probíhající stahování.",
   "updates_title": "Aktualizace",
-  "update_manual_hint": "Stáhněte nový instalátor a spusťte ho pro aktualizaci."
+  "update_manual_hint": "Stáhněte nový instalátor a spusťte ho pro aktualizaci.",
+  "turbo_partial": "Částečné: web zastavil přehrávání, uloženo"
 }

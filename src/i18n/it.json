@@ -164,5 +164,6 @@
   "update_auto": "Installa automaticamente gli aggiornamenti",
   "update_busy": "Prima completa o annulla i download in corso.",
   "updates_title": "Aggiornamenti",
-  "update_manual_hint": "Scarica il nuovo programma di installazione ed eseguilo per aggiornare."
+  "update_manual_hint": "Scarica il nuovo programma di installazione ed eseguilo per aggiornare.",
+  "turbo_partial": "Parziale: il sito ha interrotto la riproduzione, salvato"
 }

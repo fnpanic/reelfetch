@@ -9,7 +9,7 @@ import { buildBasename, cleanTitle } from '../shared/naming';
 import { visibleMedia } from '../shared/quality';
 import { loadSettings, type Settings } from '../shared/settings';
 import type { HistoryEntry, Job, MediaItem, RequestHeaders, Variant } from '../shared/types';
-import { hostMatches, hostOf, uid } from '../shared/util';
+import { formatDuration, hostMatches, hostOf, uid } from '../shared/util';
 import { engine, hasOffscreen, onEngineEvent, usesOffscreen } from './engine-client';
 import { clearHeaderRule, pruneHeaderRules, ruleId, setHeaderRule, setYoutubeUaRule } from './rules';
 import { vimeo, youtube, youtubePlayerRequest, YT_IOS, type SiteMedia } from '../shared/sites';
@@ -431,15 +431,19 @@ async function endTurbo(j: Job) {
 
 async function onTurboEvent(msg: Extract<ContentMessage, { type: 'turbo' }>, tabId: number, frameId: number) {
   const j = jobs.find((x) => x.status === 'running' && isTurbo(x) && x.media.tabId === tabId && x.progress.phase === 'recording');
-  if (!j || !msg.msId) return;
+  if (!j) return;
+  j.heartbeat = Date.now(); // the page is alive, even while its player has no stream (e.g. an error screen)
+  if (!msg.msId) return;
   const cap = media.get(tabId)?.find((m) => m.id === `mse:${tabId}:${frameId}:${msg.msId}`);
   if (msg.event === 'progress') {
-    j.heartbeat = Date.now();
     j.progress = { bytes: cap?.mse?.bytes ?? 0, phase: 'recording', recorded: msg.time, duration: msg.duration || j.progress.duration };
     changed();
     return;
   }
   await endTurbo(j);
+  // The site stopped playback early (e.g. an error screen): save what was captured, but say so.
+  const duration = msg.duration || j.progress.duration; // NaN while the player shows an error
+  if (duration && msg.time < duration - 3) j.warning = `${t('turbo_partial')} ${formatDuration(msg.time)} / ${formatDuration(duration)}`;
   j.progress = { ...j.progress, phase: 'mux' };
   changed();
   await startMse(j, frameId, msg.msId).catch((e) => fail(j, e instanceof Error ? e.message : String(e)));
@@ -858,7 +862,7 @@ async function onUi(msg: UiRequest): Promise<unknown> {
     case 'retry': {
       const j = findJob(msg.jobId);
       if (j && (j.status === 'error' || j.status === 'canceled')) {
-        Object.assign(j, { status: 'queued', error: undefined, progress: { bytes: 0 }, downloadIds: undefined, filename: undefined });
+        Object.assign(j, { status: 'queued', error: undefined, warning: undefined, progress: { bytes: 0 }, downloadIds: undefined, filename: undefined });
         pump();
       }
       return true;

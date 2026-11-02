@@ -164,5 +164,6 @@
   "update_auto": "Updates automatisch installieren",
   "update_busy": "Erst laufende Downloads abschließen oder abbrechen.",
   "updates_title": "Updates",
-  "update_manual_hint": "Neues Setup herunterladen und ausführen, um zu aktualisieren."
+  "update_manual_hint": "Neues Setup herunterladen und ausführen, um zu aktualisieren.",
+  "turbo_partial": "Unvollständig: Die Website hat die Wiedergabe gestoppt, gespeichert"
 }

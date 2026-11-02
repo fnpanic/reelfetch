@@ -164,5 +164,6 @@
   "update_auto": "Samodejno nameščaj posodobitve",
   "update_busy": "Najprej dokončajte ali prekličite prenose v teku.",
   "updates_title": "Posodobitve",
-  "update_manual_hint": "Prenesite novi namestitveni program in ga zaženite za posodobitev."
+  "update_manual_hint": "Prenesite novi namestitveni program in ga zaženite za posodobitev.",
+  "turbo_partial": "Delno: spletno mesto je ustavilo predvajanje, shranjeno"
 }

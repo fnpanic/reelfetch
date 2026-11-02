@@ -164,5 +164,6 @@
   "update_auto": "Frissítések automatikus telepítése",
   "update_busy": "Előbb fejezze be vagy szakítsa meg a folyamatban lévő letöltéseket.",
   "updates_title": "Frissítések",
-  "update_manual_hint": "Töltse le és futtassa az új telepítőt a frissítéshez."
+  "update_manual_hint": "Töltse le és futtassa az új telepítőt a frissítéshez.",
+  "turbo_partial": "Részleges: a webhely leállította a lejátszást, mentve"
 }

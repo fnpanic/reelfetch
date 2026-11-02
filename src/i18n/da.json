@@ -164,5 +164,6 @@
   "update_auto": "Installer opdateringer automatisk",
   "update_busy": "Afslut eller annuller de igangværende downloads først.",
   "updates_title": "Opdateringer",
-  "update_manual_hint": "Hent det nye installationsprogram, og kør det for at opdatere."
+  "update_manual_hint": "Hent det nye installationsprogram, og kør det for at opdatere.",
+  "turbo_partial": "Delvis: siden stoppede afspilningen, gemt"
 }

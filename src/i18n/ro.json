@@ -164,5 +164,6 @@
   "update_auto": "Instalează automat actualizările",
   "update_busy": "Mai întâi finalizați sau anulați descărcările în curs.",
   "updates_title": "Actualizări",
-  "update_manual_hint": "Descărcați noul program de instalare și rulați-l pentru actualizare."
+  "update_manual_hint": "Descărcați noul program de instalare și rulați-l pentru actualizare.",
+  "turbo_partial": "Parțial: site-ul a oprit redarea, salvat"
 }

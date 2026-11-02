@@ -164,5 +164,6 @@
   "update_auto": "Güncellemeleri otomatik yükle",
   "update_busy": "Önce devam eden indirmeleri bitirin veya iptal edin.",
   "updates_title": "Güncellemeler",
-  "update_manual_hint": "Güncellemek için yeni kurulumu indirip çalıştırın."
+  "update_manual_hint": "Güncellemek için yeni kurulumu indirip çalıştırın.",
+  "turbo_partial": "Kısmi: site oynatmayı durdurdu, kaydedilen"
 }

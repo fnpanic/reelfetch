@@ -164,5 +164,6 @@
   "update_auto": "Instaluj aktualizacje automatycznie",
   "update_busy": "Najpierw zakończ lub anuluj trwające pobieranie.",
   "updates_title": "Aktualizacje",
-  "update_manual_hint": "Pobierz nowy instalator i uruchom go, aby zaktualizować."
+  "update_manual_hint": "Pobierz nowy instalator i uruchom go, aby zaktualizować.",
+  "turbo_partial": "Częściowe: strona zatrzymała odtwarzanie, zapisano"
 }

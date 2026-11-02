@@ -164,5 +164,6 @@
   "update_auto": "Installer oppdateringer automatisk",
   "update_busy": "Fullfør eller avbryt nedlastingene som pågår først.",
   "updates_title": "Oppdateringer",
-  "update_manual_hint": "Last ned det nye installasjonsprogrammet og kjør det for å oppdatere."
+  "update_manual_hint": "Last ned det nye installasjonsprogrammet og kjør det for å oppdatere.",
+  "turbo_partial": "Delvis: nettstedet stoppet avspillingen, lagret"
 }

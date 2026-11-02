@@ -164,5 +164,6 @@
   "update_auto": "自动安装更新",
   "update_busy": "请先完成或取消正在进行的下载。",
   "updates_title": "更新",
-  "update_manual_hint": "下载并运行新的安装程序以更新。"
+  "update_manual_hint": "下载并运行新的安装程序以更新。",
+  "turbo_partial": "不完整：网站停止了播放，已保存"
 }

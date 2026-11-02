@@ -164,5 +164,6 @@
   "update_auto": "Setja upp uppfærslur sjálfkrafa",
   "update_busy": "Ljúktu við eða hættu við niðurhöl í gangi fyrst.",
   "updates_title": "Uppfærslur",
-  "update_manual_hint": "Sæktu nýja uppsetningarforritið og keyrðu það til að uppfæra."
+  "update_manual_hint": "Sæktu nýja uppsetningarforritið og keyrðu það til að uppfæra.",
+  "turbo_partial": "Að hluta: vefurinn stöðvaði spilun, vistað"
 }

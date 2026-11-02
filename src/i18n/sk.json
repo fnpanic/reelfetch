@@ -164,5 +164,6 @@
   "update_auto": "Inštalovať aktualizácie automaticky",
   "update_busy": "Najprv dokončite alebo zrušte prebiehajúce sťahovania.",
   "updates_title": "Aktualizácie",
-  "update_manual_hint": "Stiahnite nový inštalátor a spustite ho na aktualizáciu."
+  "update_manual_hint": "Stiahnite nový inštalátor a spustite ho na aktualizáciu.",
+  "turbo_partial": "Čiastočné: web zastavil prehrávanie, uložené"
 }

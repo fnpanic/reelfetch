@@ -164,5 +164,6 @@
   "update_auto": "Instal·la les actualitzacions automàticament",
   "update_busy": "Primer acabeu o cancel·leu les baixades en curs.",
   "updates_title": "Actualitzacions",
-  "update_manual_hint": "Baixeu el nou instal·lador i executeu-lo per actualitzar."
+  "update_manual_hint": "Baixeu el nou instal·lador i executeu-lo per actualitzar.",
+  "turbo_partial": "Parcial: el lloc ha aturat la reproducció, desat"
 }

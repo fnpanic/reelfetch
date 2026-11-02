@@ -192,6 +192,7 @@ npm run live:youtube # real YouTube: extractor + full turbo capture, validated w
 npm run typecheck
 npm run build
 npm run e2e          # loads dist/chrome into Chromium and runs detection/download/capture end-to-end
+npm run e2e:update   # Windows: installs the setup, self-updates through the updater, uninstalls
 ```
 
 `npm run e2e` needs a Chromium that allows `--load-extension` (e.g. Playwright's:

@@ -10,6 +10,7 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "e2e": "node scripts/e2e.mjs",
+    "e2e:update": "node scripts/e2e-update.mjs",
     "icons": "node scripts/make-icons.mjs",
     "live:detect": "node scripts/live-detect.mjs",
     "live:youtube": "node scripts/live-check.mjs",

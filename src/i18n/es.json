@@ -164,5 +164,6 @@
   "update_auto": "Instalar actualizaciones automáticamente",
   "update_busy": "Primero termina o cancela las descargas en curso.",
   "updates_title": "Actualizaciones",
-  "update_manual_hint": "Descarga el nuevo instalador y ejecútalo para actualizar."
+  "update_manual_hint": "Descarga el nuevo instalador y ejecútalo para actualizar.",
+  "turbo_partial": "Parcial: el sitio detuvo la reproducción, guardado"
 }

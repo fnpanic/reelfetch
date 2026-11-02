@@ -164,5 +164,6 @@
   "update_auto": "Installer les mises à jour automatiquement",
   "update_busy": "Terminez ou annulez d’abord les téléchargements en cours.",
   "updates_title": "Mises à jour",
-  "update_manual_hint": "Téléchargez le nouvel installateur et lancez-le pour mettre à jour."
+  "update_manual_hint": "Téléchargez le nouvel installateur et lancez-le pour mettre à jour.",
+  "turbo_partial": "Partiel : le site a arrêté la lecture, enregistré"
 }

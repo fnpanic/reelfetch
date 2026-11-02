@@ -116,6 +116,8 @@
     let idle = 0;
     let lastT = 0;
     let lastMove = Date.now();
+    let maxT = 0; // furthest point played: the capture covers 0..maxT even if the player resets later
+    let errorSince = 0;
     const seen = new Set<string>();
     const bytesOf = (id: string) => (sources.get(id) ?? []).reduce((n, b) => n + b.bytes, 0);
     /** Seconds buffered ahead of the playhead. */
@@ -170,16 +172,20 @@
       } catch {
         rate = Math.max(1, rate / 2); // browser rejected this speed
       }
+      if (started) maxT = Math.max(maxT, video.currentTime + ahead(video)); // buffered data is captured too
       if (video.currentTime > lastT + 0.5 || video.currentTime < lastT - 0.5) {
         lastT = video.currentTime;
         lastMove = Date.now();
       }
       // Watchdog: a player that stopped making progress for 45 s gets saved as far as it got.
       const stalled = started && Date.now() - lastMove > 45_000;
-      const done = stop || stalled || (started && (video.ended || (isFinite(video.duration) && video.currentTime >= video.duration - 0.3)));
+      // YouTube's "Something went wrong" screen: it will not continue, save what we have right away.
+      errorSince = document.querySelector('.ytp-error') ? errorSince || Date.now() : 0;
+      const failed = started && !!errorSince && Date.now() - errorSince > 5000;
+      const done = stop || stalled || failed || (started && (video.ended || (isFinite(video.duration) && video.currentTime >= video.duration - 0.3)));
       // If the player re-created its MediaSource, report the capture that holds the most data.
       if (done) msId = [...seen].sort((x, y) => bytesOf(y) - bytesOf(x))[0] ?? msId;
-      window.postMessage({ __reelfetch: 'turbo', event: done ? 'done' : 'progress', msId, time: video.currentTime, duration: video.duration }, '*');
+      window.postMessage({ __reelfetch: 'turbo', event: done ? 'done' : 'progress', msId, time: video.ended ? video.duration : maxT, duration: video.duration }, '*');
       if (done) {
         window.clearInterval(tick);
         video.playbackRate = 1;

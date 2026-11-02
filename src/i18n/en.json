@@ -164,5 +164,6 @@
   "update_auto": "Install updates automatically",
   "update_busy": "Finish or cancel the running downloads first.",
   "updates_title": "Updates",
-  "update_manual_hint": "Download the new setup and run it to update."
+  "update_manual_hint": "Download the new setup and run it to update.",
+  "turbo_partial": "Partial: the site stopped playback, saved"
 }
