@@ -1,7 +1,11 @@
 import type { MediaKind } from './types';
 
-const VIDEO_EXT = /\.(mp4|m4v|webm|mov|mkv|flv|ogv|3gp|avi|wmv)$/i;
-const AUDIO_EXT = /\.(mp3|m4a|aac|ogg|oga|opus|wav|flac|weba)$/i;
+// Same container list as VDH 10 (minus plain .ts, handled below: usually an HLS segment).
+const VIDEO_EXT = /\.(mp4|m4v|webm|mov|qt|mkv|flv|f4v|ogv|ogm|3gp|3g2|avi|divx|wmv|asf|mpe?g|mpe|mpv|m2v|m2ts?|mts|vob|mxf|dv|rm|rmvb|h264|y4m)$/i;
+const AUDIO_EXT = /\.(mp3|mp2|m4a|aac|ac3|dts|ogg|oga|opus|wav|aiff|au|snd|voc|flac|ape|wv|wma|amr|ra|mka|weba)$/i;
+/** A .ts this large is a whole recording, not an HLS segment. */
+const WHOLE_TS_SIZE = 20 << 20;
+const OTHER_MEDIA_MIME = /^application\/(vnd\.rn-realmedia|x-matroska|ogg|mxf)/i;
 const SEGMENT_EXT = /\.(ts|m4s|m4f|m4v?seg|cmfv|cmfa|aac?seg|vtt|webvtt|srt|key)$/i;
 const SEGMENT_MIME = /^(video\/mp2t|video\/iso\.segment|audio\/iso\.segment|application\/octet-stream|text\/vtt)/i;
 const HLS_MIME = /mpegurl/i;
@@ -47,8 +51,10 @@ export function classify(r: ResponseInfo): Detection | null {
   if (HLS_MIME.test(ct) || /\.m3u8?$/i.test(path)) return { kind: 'hls', mime: ct || undefined };
   if (DASH_MIME.test(ct) || /\.mpd$/i.test(path)) return { kind: 'dash', mime: ct || undefined };
 
+  const size0 = totalFromRange(r.contentRange) ?? r.contentLength;
+  if (/\.ts$/i.test(path) && size0 != null && size0 >= WHOLE_TS_SIZE) return { kind: 'direct', mime: ct || 'video/mp2t', size: size0 };
   if (SEGMENT_EXT.test(path)) return null;
-  const isMediaMime = /^(video|audio)\//.test(ct) && !SEGMENT_MIME.test(ct);
+  const isMediaMime = (/^(video|audio)\//.test(ct) && !SEGMENT_MIME.test(ct)) || OTHER_MEDIA_MIME.test(ct);
   const isMediaExt = VIDEO_EXT.test(path) || AUDIO_EXT.test(path);
   if (!isMediaMime && !(isMediaExt && (!ct || SEGMENT_MIME.test(ct)))) return null;
 
@@ -88,6 +94,25 @@ const MIME_EXT: Record<string, string> = {
   'audio/webm': 'weba',
   'audio/wav': 'wav',
   'audio/flac': 'flac',
+  'audio/x-flac': 'flac',
+  'audio/x-wav': 'wav',
+  'audio/wave': 'wav',
+  'audio/x-m4a': 'm4a',
+  'audio/x-ms-wma': 'wma',
+  'audio/amr': 'amr',
+  'audio/3gpp': '3gp',
+  'video/x-msvideo': 'avi',
+  'video/avi': 'avi',
+  'video/x-ms-wmv': 'wmv',
+  'video/x-ms-asf': 'asf',
+  'video/mpeg': 'mpg',
+  'video/mp2t': 'ts',
+  'video/3gpp': '3gp',
+  'video/3gpp2': '3g2',
+  'video/x-m4v': 'm4v',
+  'application/x-matroska': 'mkv',
+  'application/vnd.rn-realmedia': 'rm',
+  'application/ogg': 'ogg',
 };
 
 export function extFor(url: string, mime?: string): string {

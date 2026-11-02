@@ -97,6 +97,14 @@ describe('other sites', () => {
     expect(out[1].variants!.map((v) => v.height)).toEqual([720, 360]);
   });
 
+  it('vimeo: falls back to the player config endpoint when the page has no inline config', () => {
+    expect(vimeo(undefined, 'https://vimeo.com/76979871')).toEqual([
+      { site: 'vimeo', key: 'vimeo:76979871:config', configUrl: 'https://player.vimeo.com/video/76979871/config' },
+    ]);
+    expect(vimeo(undefined, 'https://player.vimeo.com/video/123456?h=x')[0].configUrl).toBe('https://player.vimeo.com/video/123456/config');
+    expect(vimeo(undefined, 'https://vimeo.com/about')).toEqual([]);
+  });
+
   it('ok.ru: data-options metadata', () => {
     const metadata = JSON.stringify({
       movie: { id: '9', title: 'OK video', poster: 'https://ok/p.jpg', duration: '12' },
@@ -134,5 +142,8 @@ describe('other sites', () => {
     const ld = JSON.stringify({ '@graph': [{ '@type': 'VideoObject', contentUrl: 'https://cdn/v.mp4' }] });
     const out = genericMeta([ld, '{broken'], { 'og:video': 'https://cdn/master.m3u8', 'og:video:url': 'https://x/player.html' }, 'Page');
     expect(out.map((o) => o.hls ?? o.variants?.[0].url)).toEqual(['https://cdn/v.mp4', 'https://cdn/master.m3u8']);
+    // YouTube-style og:video pointing at an HTML embed page is not media.
+    expect(genericMeta([], { 'og:video:url': 'https://www.youtube.com/embed/abc', 'og:video:type': 'text/html' })).toEqual([]);
+    expect(genericMeta([], { 'og:video': 'https://cdn/stream', 'og:video:type': 'video/mp4' })).toHaveLength(1);
   });
 });

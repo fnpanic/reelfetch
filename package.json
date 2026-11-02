@@ -10,7 +10,9 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "e2e": "node scripts/e2e.mjs",
-    "icons": "node scripts/make-icons.mjs"
+    "icons": "node scripts/make-icons.mjs",
+    "live:detect": "node scripts/live-detect.mjs",
+    "live:youtube": "node scripts/live-check.mjs"
   },
   "dependencies": {
     "@mediabunny/mp3-encoder": "^1.65.0",

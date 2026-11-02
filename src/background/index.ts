@@ -12,7 +12,7 @@ import type { HistoryEntry, Job, MediaItem, RequestHeaders, Variant } from '../s
 import { hostMatches, hostOf, uid } from '../shared/util';
 import { engine, hasOffscreen, onEngineEvent, usesOffscreen } from './engine-client';
 import { clearHeaderRule, pruneHeaderRules, ruleId, setHeaderRule } from './rules';
-import type { SiteMedia } from '../shared/sites';
+import { vimeo, type SiteMedia } from '../shared/sites';
 
 // ------------------------------------------------------------------ state
 
@@ -684,6 +684,14 @@ async function addSiteMedia(tabId: number, frameId: number, items: unknown[]) {
       duration: num(it.duration),
       drm: it.drm === true || undefined,
     };
+    if (it.site === 'vimeo' && http(it.configUrl) && new URL(it.configUrl).hostname === 'player.vimeo.com') {
+      // Only this known endpoint: a page must not make the extension fetch arbitrary URLs.
+      const res = await fetch(it.configUrl, { credentials: 'include' }).catch(() => null);
+      const json = res?.ok ? await res.json().catch(() => null) : null;
+      const found = vimeo(json);
+      if (found.length) await addSiteMedia(tabId, frameId, found);
+      continue;
+    }
     if (http(it.hls)) await addMedia(tabId, frameId, it.hls, 'hls', meta);
     else if (http(it.dash)) await addMedia(tabId, frameId, it.dash, 'dash', meta);
     else if (typeof it.dashXml === 'string' && it.dashXml.length < 4e6)

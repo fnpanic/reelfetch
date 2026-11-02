@@ -60,6 +60,7 @@ export function App({ sidebar }: { sidebar: boolean }) {
               role="tab"
               aria-selected={view === id}
               title={label}
+              aria-label={badge ? `${label} (${badge})` : label}
               className={view === id ? 'tab active' : 'tab'}
               onClick={() => setView(id)}
             >

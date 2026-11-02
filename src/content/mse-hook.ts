@@ -114,13 +114,24 @@
         .sort((a, b) => b.clientWidth * b.clientHeight - a.clientWidth * a.clientHeight)[0];
     (w as { __reelfetchTurboStop?: () => void }).__reelfetchTurboStop = () => (stop = true);
     let idle = 0;
+    let lastT = 0;
+    let lastMove = Date.now();
+    const seen = new Set<string>();
+    const bytesOf = (id: string) => (sources.get(id) ?? []).reduce((n, b) => n + b.bytes, 0);
+    /** Seconds buffered ahead of the playhead. */
+    const ahead = (v: HTMLVideoElement) => {
+      for (let i = 0; i < v.buffered.length; i++)
+        if (v.buffered.start(i) <= v.currentTime + 0.5 && v.buffered.end(i) >= v.currentTime) return v.buffered.end(i) - v.currentTime;
+      return 0;
+    };
     const tick = window.setInterval(() => {
       if (!video?.isConnected) video = pick();
       if (!video) {
         if (++idle > 300) window.clearInterval(tick); // this frame has no captured video
         return;
       }
-      const msId = msByUrl.get(video.src) ?? msByUrl.get(video.currentSrc) ?? '';
+      let msId = msByUrl.get(video.src) ?? msByUrl.get(video.currentSrc) ?? '';
+      if (msId) seen.add(msId);
       const player = document.querySelector<Player>('#movie_player');
       const best = player?.getAvailableQualityLevels?.()?.[0];
       if (best && best !== 'auto' && player?.getPlaybackQuality?.() !== best) player?.setPlaybackQualityRange?.(best, best);
@@ -141,17 +152,33 @@
         }
         video.currentTime = 0;
       }
-      if (video.paused && !video.ended)
+      // YouTube: resume through its player API, otherwise its state machine pauses the element again.
+      const yt = player as (Player & { playVideo?: () => void; getPlayerState?: () => number }) | null;
+      if (video.paused && !video.ended && yt?.playVideo && yt.getPlayerState?.() !== 0) yt.playVideo();
+      else if (video.paused && !video.ended)
         video.play().catch(() => {
           video!.muted = true; // autoplay policy: muted playback is always allowed
           void video!.play().catch(() => {});
         });
+      // Adaptive speed: only race ahead while the player has plenty buffered. Players like YouTube
+      // buffer ~60 s and reset themselves when starved; this keeps them fed (as fast as they fetch).
+      const a = ahead(video);
+      const toEnd = isFinite(video.duration) && video.currentTime + a >= video.duration - 0.5; // all buffered
+      const wanted = toEnd || a > 30 ? rate : a > 15 ? Math.min(rate, 4) : a > 5 ? Math.min(rate, 2) : 1;
       try {
-        if (video.playbackRate !== rate) video.playbackRate = rate;
+        if (video.playbackRate !== wanted) video.playbackRate = wanted;
       } catch {
         rate = Math.max(1, rate / 2); // browser rejected this speed
       }
-      const done = stop || (started && (video.ended || (isFinite(video.duration) && video.currentTime >= video.duration - 0.3)));
+      if (video.currentTime > lastT + 0.5 || video.currentTime < lastT - 0.5) {
+        lastT = video.currentTime;
+        lastMove = Date.now();
+      }
+      // Watchdog: a player that stopped making progress for 45 s gets saved as far as it got.
+      const stalled = started && Date.now() - lastMove > 45_000;
+      const done = stop || stalled || (started && (video.ended || (isFinite(video.duration) && video.currentTime >= video.duration - 0.3)));
+      // If the player re-created its MediaSource, report the capture that holds the most data.
+      if (done) msId = [...seen].sort((x, y) => bytesOf(y) - bytesOf(x))[0] ?? msId;
       window.postMessage({ __reelfetch: 'turbo', event: done ? 'done' : 'progress', msId, time: video.currentTime, duration: video.duration }, '*');
       if (done) {
         window.clearInterval(tick);

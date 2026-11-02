@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseAttributes, parseHls, ivFromSequence } from '../src/shared/hls';
 import { fillTemplate, parseIsoDuration, parseMpd } from '../src/shared/dash';
-import { classify, mediaKey } from '../src/shared/detect';
+import { classify, extFor, mediaKey } from '../src/shared/detect';
 import { pickByLang, pickVariant, visibleMedia } from '../src/shared/quality';
 import { buildBasename, cleanTitle } from '../src/shared/naming';
 import { sanitizeSegment, sanitizeSubdir } from '../src/shared/util';
@@ -183,6 +183,16 @@ describe('detect', () => {
     expect(classify({ url: 'https://a.b/ping.mp3', contentType: 'audio/mpeg', contentLength: 900 })).toBeNull();
     expect(classify({ url: 'https://a.b/page.html', contentType: 'text/html' })).toBeNull();
     expect(classify({ url: 'blob:https://a.b/123' })).toBeNull();
+  });
+
+  it('recognizes the same container list as VDH (AVI, WMV, MPEG, VOB, RealMedia, WMA, whole .ts files…)', () => {
+    for (const f of ['a.avi', 'a.wmv', 'a.asf', 'a.mpg', 'a.m2ts', 'a.vob', 'a.rmvb', 'a.wma', 'a.amr', 'a.ape', 'a.mxf'])
+      expect(classify({ url: `https://a.b/${f}`, contentLength: 5e6 })?.kind, f).toBe('direct');
+    expect(classify({ url: 'https://a.b/x', contentType: 'application/vnd.rn-realmedia', contentLength: 5e6 })?.kind).toBe('direct');
+    expect(classify({ url: 'https://a.b/rec.ts', contentType: 'video/mp2t', contentLength: 300e6 })?.kind).toBe('direct');
+    expect(classify({ url: 'https://a.b/seg7.ts', contentType: 'video/mp2t', contentLength: 2e6 })).toBeNull();
+    expect(extFor('https://a.b/stream?id=1', 'video/x-msvideo')).toBe('avi');
+    expect(extFor('https://a.b/v.wmv', 'video/x-ms-wmv')).toBe('wmv');
   });
 
   it('dedupes range query params', () => {

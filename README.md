@@ -50,7 +50,9 @@ streams), the item offers **Turbo capture**.
 
 **Turbo capture** (works on any site): ReelFetch reloads the page, plays the video *muted at up to 16× speed* from the
 start at the best quality, skips YouTube pre-roll ads, records exactly what the player receives and saves it
-automatically when the video ends - a 10-minute video is captured in well under a minute.
+automatically when the video ends. The speed adapts to the player's buffer: it races while plenty is buffered and
+slows down before the player starves (YouTube buffers ~60 s ahead and resets itself when it runs dry), so turbo runs
+as fast as the site delivers. A watchdog saves what was captured if a player stops making progress for 45 s.
 
 **No video found?** Click *No video?* → *Reload page* (optionally clearing the site's cookies), start a *Turbo
 capture*, or enable **stream capture** for the site to record what the player plays at normal speed.
@@ -155,6 +157,8 @@ Plain files skip the engine and go straight to the browser's download manager (r
 npm test             # unit + engine integration tests (real HLS/DASH fixtures over HTTP) + locale checks
 RF_NETWORK=1 npm test  # also checks public reference streams (DASH-IF livesim2 live DASH, Mux HLS)
 npx web-ext lint --source-dir dist/firefox   # Mozilla's add-on linter on the Firefox build
+npm run live:detect  # real sites: what the extractors / detection find (needs internet)
+npm run live:youtube # real YouTube: extractor + full turbo capture, validated with ffprobe
 npm run typecheck
 npm run build
 npm run e2e          # loads dist/chrome into Chromium and runs detection/download/capture end-to-end
@@ -170,9 +174,15 @@ Test fixtures in `test/fixtures` were generated with ffmpeg (see `test/fixtures/
 - MSE capture records only what is played. Seeking while recording can produce gaps (Turbo capture avoids this by
   playing from the start). Turbo capture follows the player's adaptive quality; it requests the best level on
   YouTube, other players may pick lower levels on slow connections.
-- Site extractors were tested against synthetic player data (unit tests + an in-browser run against a mapped
-  `www.youtube.com`), not against the live sites; sites change their page data, so an extractor can break - Turbo
-  capture and the generic HLS/DASH detection keep working in that case.
+- Live-site status (checked 2026-11-02 with `npm run live:detect` / `live:youtube` from Germany, headless Chromium):
+  YouTube extractor ✅ (title/duration; today's YouTube is SABR-only, so it offers Turbo capture). YouTube Turbo
+  capture produced a valid 1080p AV1 + Opus file, but only of the first ~60 s: YouTube stops playback in automated
+  headless browsers (it doesn't even play at 1× there without the extension), so the watchdog saved the partial
+  capture - a full-length run needs a normal browser profile. Vimeo ✅
+  (title, 4 qualities - this public video is FairPlay-DRM'd by Vimeo and correctly refused), generic HLS (hls.js demo)
+  ✅. Bilibili redirected the headless browser to an error page and OK.ru needs a valid video id, so those two
+  extractors are covered by unit tests only; Facebook/Instagram/VK need logins and are unit-tested only. Sites change
+  their page data, so an extractor can break - Turbo capture and the generic HLS/DASH detection keep working then.
 - HLS `SAMPLE-AES` and any Widevine/PlayReady/FairPlay content is DRM and is refused by design (as in VDH).
 - Live recordings start at the live edge (like a player), not at the beginning of the DVR window.
 - Audio-only MP3 conversion applies to stream/file downloads; MSE captures are saved in their original codec.
