@@ -11,6 +11,13 @@ export interface Settings {
   uiMode: 'popup' | 'sidebar';
   preferredQuality: 'highest' | '1080' | '720' | '480';
   preferMkv: boolean;
+  /** What the main button / Alt+Down does. */
+  defaultAction: 'download' | 'download_as' | 'audio' | 'copy';
+  previewMode: 'none' | 'image' | 'video';
+  preferOriginalAudio: boolean;
+  /** Turbo capture playback speed. */
+  turboSpeed: number;
+  privateNotifications: boolean;
   /** Audio-only downloads: keep the original codec (remux) or transcode to MP3. */
   audioFormat: 'original' | 'mp3';
   alwaysSaveAs: boolean;
@@ -40,6 +47,11 @@ export const DEFAULT_SETTINGS: Settings = {
   uiMode: 'popup',
   preferredQuality: '1080',
   preferMkv: false,
+  defaultAction: 'download',
+  previewMode: 'image',
+  preferOriginalAudio: true,
+  turboSpeed: 16,
+  privateNotifications: true,
   audioFormat: 'original',
   alwaysSaveAs: false,
   notifyOnComplete: true,

@@ -182,3 +182,15 @@ main { overflow-y: auto; padding: 8px 10px 12px; }
 .tos { padding: 20px; display: grid; gap: 10px; }
 .tos h1 { font-size: 1.2em; margin: 0; }
 .tos p { color: var(--muted); margin: 0; }
+
+.thumb { position: relative; }
+.thumb video { width: 100%; height: 100%; object-fit: cover; }
+.thumb-play {
+  position: absolute; right: 3px; bottom: 2px; font-size: 9px; color: #fff;
+  background: rgb(0 0 0 / 0.55); border-radius: 3px; padding: 0 3px;
+}
+.langs { list-style: none; margin: 0 0 4px; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+.langs li { display: inline-flex; align-items: center; gap: 0; background: var(--chip); border-radius: 5px; padding-left: 6px; }
+.langs .icon-btn { padding: 2px 4px; font-size: 0.85em; }
+.lang-field { align-items: start; }
+.help .buttons { margin-bottom: 4px; }

@@ -12,8 +12,12 @@ export interface Variant {
   width?: number;
   bandwidth?: number;
   codecs?: string;
-  /** HLS: media playlist URL. DASH: representation id. */
+  /** HLS: media playlist URL. DASH: representation id. Site files: the (video) file URL. */
   ref: string;
+  /** Site files with separate audio (YouTube/Bilibili style): audio file URL to merge. */
+  audioRef?: string;
+  mime?: string;
+  size?: number;
 }
 
 export interface MediaItem {
@@ -44,6 +48,13 @@ export interface MediaItem {
   error?: string;
   /** MSE capture: buffered bytes and track mimes. */
   mse?: { bytes: number; mimes: string[] };
+  /** Found by a site extractor (e.g. "youtube"); title comes from the site's player data. */
+  site?: string;
+  title?: string;
+  /** Inline DASH manifest text (sites that embed the MPD in page data). */
+  manifest?: string;
+  /** Site needs turbo capture (no direct stream URLs available). */
+  captureOnly?: boolean;
 }
 
 export type JobStatus = 'queued' | 'running' | 'done' | 'error' | 'canceled';
@@ -52,6 +63,8 @@ export interface JobOptions {
   variantId?: string;
   audioOnly?: boolean;
   saveAs?: boolean;
+  /** Turbo capture: play the page's video at high speed and save what the player received. */
+  turbo?: boolean;
 }
 
 export interface Job {
@@ -67,6 +80,8 @@ export interface Job {
   downloadIds?: number[];
   blobUrls?: string[];
   filename?: string;
+  /** Turbo capture: hosts temporarily added to the capture list for this job. */
+  turboHosts?: string[];
 }
 
 export interface Progress {
@@ -74,8 +89,10 @@ export interface Progress {
   total?: number;
   segments?: number;
   segmentsTotal?: number;
-  /** Seconds recorded (live). */
+  /** Seconds recorded (live) / played (turbo capture). */
   recorded?: number;
+  /** Turbo capture: media duration in seconds. */
+  duration?: number;
   phase?: 'download' | 'mux' | 'convert' | 'save' | 'recording';
 }
 

@@ -60,6 +60,16 @@ beforeAll(async () => {
         return;
       }
       const body = await readFile(join(root, path));
+      const range = /bytes=(\d+)-(\d*)/.exec(req.headers.range ?? '');
+      if (range) {
+        // Range support like real CDNs (exercises the chunked downloader).
+        const start = Number(range[1]);
+        const end = Math.min(body.byteLength - 1, range[2] ? Number(range[2]) : body.byteLength - 1);
+        res.statusCode = 206;
+        res.setHeader('Content-Range', `bytes ${start}-${end}/${body.byteLength}`);
+        res.end(body.subarray(start, end + 1));
+        return;
+      }
       res.setHeader('Content-Length', body.byteLength);
       res.end(body);
     } catch {
@@ -81,6 +91,7 @@ const settings: EngineSettings = {
   downloadSubtitles: false,
   preferMkv: false,
   audioFormat: 'original',
+  preferOriginalAudio: true,
 };
 
 function media(kind: MediaItem['kind'], path: string): MediaItem {
@@ -193,6 +204,36 @@ describe('engine', () => {
     // Joins at the live edge (last 3 segments of the 5 then listed) and follows until the end: 4 x 1 s.
     expect(info.duration).toBeGreaterThan(3.5);
     expect(info.duration).toBeLessThan(5);
+  });
+
+  it('merges separate site video + audio files (YouTube/Bilibili style)', async () => {
+    const m: MediaItem = {
+      ...media('direct', 'site-video.mp4'),
+      variants: [{ id: 'v', ref: `${base}/site-video.mp4`, audioRef: `${base}/site-audio.m4a`, label: '180p' }],
+    };
+    const progress: (number | undefined)[] = [];
+    const out = await download(job(m, { variantId: 'v' }), settings, { ...ctl(), onProgress: (p) => progress.push(p.total) });
+    expect(progress.at(-1)).toBe(83153 + 482781); // totals learned from Content-Range
+    const info = await inspect(out.files[0].blob);
+    expect(info).toMatchObject({ video: ['avc'], audio: ['aac'] });
+    expect(info.duration).toBeGreaterThan(9.5);
+    const audio = await download(job(m, { variantId: 'v', audioOnly: true }), settings, ctl());
+    expect((await inspect(audio.files[0].blob)).video).toEqual([]);
+  });
+
+  it('uses inline DASH manifests (Facebook style)', async () => {
+    const text = (await readFile(join(root, 'dash/manifest.mpd'), 'utf8')).replace('<Period', `<BaseURL>${base}/dash/</BaseURL><Period`);
+    const m: MediaItem = { ...media('dash', 'x'), url: 'about:reelfetch-1', manifest: text };
+    expect((await analyze(m)).variants?.[0].height).toBe(180);
+    const out = await download(job(m), settings, ctl());
+    expect((await inspect(out.files[0].blob)).duration).toBeGreaterThan(5.5);
+  });
+
+  it('builds short previews', async () => {
+    const out = await download(job(media('hls', 'hls-fmp4/master.m3u8')), settings, { ...ctl(), previewSeconds: 2 });
+    const info = await inspect(out.files[0].blob);
+    expect(info.duration).toBeGreaterThan(1.5);
+    expect(info.duration).toBeLessThan(3.5);
   });
 
   it('keeps a live recording when a segment fails', async () => {

@@ -12,6 +12,9 @@ export interface DashRep {
   mimeType?: string;
   contentType: DashContent;
   lang?: string;
+  /** DASH Role (e.g. "main", "dub", "description") and label, used to prefer the original audio. */
+  role?: string;
+  name?: string;
   drm: boolean;
   segments: Segment[];
 }
@@ -226,6 +229,8 @@ export function parseMpd(xml: string, manifestUrl: string, now = Date.now()): Da
           mimeType: rep.getAttribute('mimeType') ?? as.getAttribute('mimeType') ?? undefined,
           contentType: type,
           lang: as.getAttribute('lang') ?? undefined,
+          role: kid(as, 'Role')?.getAttribute('value') ?? undefined,
+          name: as.getAttribute('label') ?? kid(as, 'Label')?.textContent ?? undefined,
           drm,
           segments,
         });

@@ -7,7 +7,7 @@ import { Icon } from '../Icon';
 function percent(j: Job): number | undefined {
   const p = j.progress;
   if (j.status === 'done') return 100;
-  if (p.phase === 'recording') return undefined;
+  if (p.phase === 'recording') return p.duration ? Math.min(100, ((p.recorded ?? 0) / p.duration) * 100) : undefined;
   if (p.total) return Math.min(100, (p.bytes / p.total) * 100);
   if (p.segmentsTotal) return Math.min(100, ((p.segments ?? 0) / p.segmentsTotal) * 100);
   return undefined;
@@ -19,7 +19,10 @@ function statusText(j: Job): string {
   if (j.status === 'done') return [t('status_done'), formatBytes(p.total ?? p.bytes)].filter(Boolean).join(' · ');
   if (j.status === 'canceled') return t('status_canceled');
   if (j.status === 'error') return j.error ?? t('download_failed');
-  if (p.phase === 'recording') return `${t('status_recording')} ${formatDuration(p.recorded ?? 0)} · ${formatBytes(p.bytes)}`;
+  if (p.phase === 'recording')
+    return p.duration
+      ? `${t('status_turbo')} ${formatDuration(p.recorded ?? 0)} / ${formatDuration(p.duration)} · ${formatBytes(p.bytes)}`
+      : `${t('status_recording')} ${formatDuration(p.recorded ?? 0)} · ${formatBytes(p.bytes)}`;
   if (p.phase === 'mux') return t('status_muxing');
   if (p.phase === 'convert') return t('status_converting');
   if (p.phase === 'save') return t('status_saving');

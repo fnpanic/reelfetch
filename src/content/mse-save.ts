@@ -59,7 +59,7 @@ async function save(msg: SaveRequest) {
   if (!bufs.length) throw new Error('Nothing captured yet - play the video first.');
   const blobs = bufs.map((b) => new Blob(b.chunks, { type: b.mime }));
   try {
-    const r = await remux(blobs, { audioOnly: msg.audioOnly, preferMkv: msg.preferMkv });
+    const r = await remux(blobs, { audioOnly: msg.audioOnly, preferMkv: msg.preferMkv, overlap: 'drop' });
     const name = `${msg.filename}.${r.ext}`;
     saveBlob(new Blob([r.buffer!]), name);
     return { ok: true, filename: name, size: r.buffer!.byteLength };

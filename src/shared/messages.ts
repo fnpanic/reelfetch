@@ -7,7 +7,9 @@ export type EngineRequest =
   | { op: 'start'; job: Job; settings: EngineSettings }
   | { op: 'cancel'; jobId: string }
   | { op: 'stop'; jobId: string }
-  | { op: 'release'; jobId: string };
+  | { op: 'release'; jobId: string }
+  | { op: 'preview'; media: MediaItem; settings: EngineSettings }
+  | { op: 'copy'; text: string };
 
 /** Engine -> background. */
 export type EngineEvent =
@@ -27,7 +29,11 @@ export type UiRequest =
   | { type: 'remove-job'; jobId: string }
   | { type: 'clear-history' }
   | { type: 'remove-history'; id: string }
-  | { type: 'reload-tab'; tabId: number }
+  | { type: 'reload-tab'; tabId: number; clearCookies?: boolean }
+  | { type: 'preview'; mediaId: string }
+  | { type: 'default-action'; mediaId: string; variantId?: string }
+  | { type: 'turbo'; mediaId?: string; tabId: number }
+  | { type: 'pick-name'; tabId: number }
   | { type: 'capture-site'; tabId: number; enable: boolean }
   | { type: 'settings-changed' };
 
@@ -35,4 +41,7 @@ export type UiRequest =
 export type ContentMessage =
   | { type: 'page-media'; urls: string[]; title: string; thumbnail?: string }
   | { type: 'mse-update'; msId: string; bytes: number; mimes: string[] }
-  | { type: 'drm-detected' };
+  | { type: 'drm-detected' }
+  | { type: 'site-media'; items: unknown[] }
+  | { type: 'turbo'; event: 'progress' | 'done'; msId: string; time: number; duration: number }
+  | { type: 'picker-result'; selector: string; text: string };

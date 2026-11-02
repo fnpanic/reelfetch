@@ -9,9 +9,26 @@ interface Running {
   urls: string[];
 }
 
+/** Clipboard write from a background context (offscreen document or Firefox background page). */
+async function copyText(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return;
+  } catch {
+    /* offscreen documents have no focus: fall back to execCommand */
+  }
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand('copy');
+  ta.remove();
+}
+
 /** Engine request handler; `emit` delivers events to the background (and may return a reply). */
 export function createEngineHost(emit: (e: EngineEvent) => Promise<unknown>) {
   const jobs = new Map<string, Running>();
+  const previews = new Map<string, string>();
   const ready = clearSpools();
 
   async function release(jobId: string) {
@@ -37,6 +54,27 @@ export function createEngineHost(emit: (e: EngineEvent) => Promise<unknown>) {
       }
       case 'release':
         return release(req.jobId);
+      case 'copy':
+        return copyText(req.text);
+      case 'preview': {
+        const cached = previews.get(req.media.id);
+        if (cached) return cached;
+        const out = await download(
+          { id: `preview-${req.media.id}`, media: req.media, options: {}, basename: '', status: 'running', createdAt: 0, progress: { bytes: 0 } },
+          { ...req.settings, preferredQuality: '480', downloadSubtitles: false, audioFormat: 'original' },
+          { signal: AbortSignal.timeout(30000), stopped: () => true, onProgress: () => {}, previewSeconds: 6 },
+        );
+        const url = URL.createObjectURL(out.files[0].blob);
+        await Promise.all(out.spools.map((s) => s.remove()));
+        previews.set(req.media.id, url);
+        // Small LRU: previews are a few hundred KB each.
+        if (previews.size > 20) {
+          const [oldest] = previews.keys();
+          URL.revokeObjectURL(previews.get(oldest)!);
+          previews.delete(oldest);
+        }
+        return url;
+      }
       case 'start': {
         const { job, settings } = req;
         jobs.get(job.id)?.abort.abort(); // a retry supersedes any run still winding down

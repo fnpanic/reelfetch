@@ -36,14 +36,24 @@ Requires Node.js 20.19+ or 22.12+.
 1. Open a page and start the video. The toolbar badge shows how many media were found.
 2. Click the ReelFetch icon (or press **Alt+↑**). Every detected media is listed with its type, quality, duration,
    size and languages.
-3. Click **Download**, or open the **⋮** menu for *Download As…*, *Download audio only*, *Copy URL*, *Play* and *Details*.
-   Pick a quality in the drop-down when a stream offers several.
+3. Click the main button (by default **Download**; configurable to *Download As…*, *Audio* or *Copy URL*), or open
+   the **⋮** menu for *Download*, *Download As…*, *Download audio only*, *Copy URL*, *Play*, *Turbo capture*,
+   *Pick the title from the page…* and *Details*. Pick a quality in the drop-down when a stream offers several.
+   Hover a thumbnail for a short video preview (Settings → Media preview).
 4. Watch progress in **Downloads**. Live streams show **Record** and can be stopped at any time; the recording is saved.
-5. **Alt+↓** downloads the best media of the current tab right away. The right-click menu offers the same.
+5. **Alt+↓** runs the default action on the best media of the current tab. The right-click menu offers the same.
 
-**No video found?** Click *No video?* → *Reload page*, or enable **stream capture** for the site. ReelFetch then
-records what the player feeds into the `<video>` element (Media Source Extensions). Play the video through, then save it.
-This catches players that hide their playlists.
+**YouTube, Vimeo, Bilibili, Facebook, Instagram, VK, OK.ru:** site extractors read the player's own data and list
+every quality with the real video title; separate video and audio streams are merged automatically, the original
+(non-dubbed) audio track is preferred. When a site exposes no direct stream URLs (e.g. YouTube's ciphered / SABR
+streams), the item offers **Turbo capture**.
+
+**Turbo capture** (works on any site): ReelFetch reloads the page, plays the video *muted at up to 16× speed* from the
+start at the best quality, skips YouTube pre-roll ads, records exactly what the player receives and saves it
+automatically when the video ends - a 10-minute video is captured in well under a minute.
+
+**No video found?** Click *No video?* → *Reload page* (optionally clearing the site's cookies), start a *Turbo
+capture*, or enable **stream capture** for the site to record what the player plays at normal speed.
 
 ## Feature parity with Video DownloadHelper
 
@@ -72,21 +82,30 @@ analysis with REA).
 | Right-click menu with detected media | ✅ | ✅ |
 | Hotkeys Alt+↑ (open) and Alt+↓ (default action) | ✅ | ✅ |
 | Media sorting (smart/newest/oldest), hide duplicate sub-playlists | ✅ | ✅ |
-| "No video?" force-detection reload | ✅ (also clears cookies) | ✅ (cache-bypassing reload) |
+| "No video?" force-detection reload, optionally clearing the site's cookies | ✅ | ✅ |
 | Copy media details to clipboard | ✅ | ✅ |
 | Terms notice, reset settings, reload add-on | ✅ | ✅ |
 | Replay page Referer/Origin to protected CDNs | ✅ | ✅ (session `declarativeNetRequest` rules) |
-| Record any MSE-fed stream (no manifest needed) | ❌ | ✅ |
-| Site-specific extractors (YouTube, Facebook, Vimeo, VK, OK, Bilibili, Kick, …) | ✅ | ❌, see below |
-| Conversion to MP3 (VDH: companion app with ffmpeg) | ✅ | ✅ built in, no extra app (WebCodecs decode + LAME/WASM) |
-| Other transcodes via the companion app (e.g. AVI, resize) | ✅ | ❌ (lossless remux to MP4/WebM/MKV instead) |
-| Premium/licence, account | ✅ | not applicable (free) |
+| Site extractors: YouTube, Vimeo, Bilibili, Facebook, Instagram, VK, OK.ru | ✅ | ✅ (player data; split audio/video merged; original audio preferred) |
+| Kick, TwitCasting, Chaturbate, iQIYI, Canva and other HLS/DASH sites | ✅ (per-site scripts) | ✅ via generic HLS/DASH detection |
+| JSON-LD `VideoObject` / Open Graph video on any page | - | ✅ |
+| YouTube: download without per-site deciphering (VDH implements YouTube's SABR protocol) | ✅ | ✅ via Turbo capture (best quality, ads skipped, auto-save) |
+| Default action (download / download as / audio / copy URL), "always copy URL" | ✅ | ✅ |
+| Media preview: image or short video preview | ✅ | ✅ (engine builds a 6 s clip of HLS/DASH streams) |
+| Smart naming: pick the title element on the page | ✅ (smart-naming page) | ✅ (on-page element picker) |
+| Language preference lists (add / move / remove), prefer original audio | ✅ | ✅ |
+| Private browsing: warning when disabled, notifications for private downloads | ✅ | ✅ |
+| "Change browser download directory" shortcut | ✅ | ✅ |
+| 100-downloads milestone | ✅ | ✅ |
+| Record any MSE-fed stream at normal speed (no manifest needed) | ❌ | ✅ |
+| Conversion to MP3 | via companion app | ✅ built in, no extra app (WebCodecs decode + LAME/WASM) |
+| Premium/licence, account, reviews, reporting to vendor servers | ✅ | not applicable (free, no servers) |
 | Languages | 33 | the same 33 (en, de hand-written; others machine-translated, review welcome) |
 
-**Why no site-specific extractors?** VDH ships per-site scripts that scrape player internals (e.g. YouTube signature
-deciphering). That is a circumvention of the site's protection, breaks whenever the site changes, and the Chrome Web
-Store forbids YouTube downloaders. ReelFetch relies on generic network detection instead, which covers every site
-that streams plain HLS, DASH or files, plus MSE capture as the catch-all for players that hide their streams.
+**How YouTube works here:** when the player data contains plain stream URLs, they are listed and merged like any
+other site. When it doesn't (ciphered signatures / SABR), ReelFetch doesn't reverse-engineer YouTube's protocol the way
+VDH does - Turbo capture records what YouTube's own player plays, at up to 16× speed. That keeps working when YouTube
+changes its internals. (The Chrome Web Store doesn't accept YouTube downloaders; install from the zip.)
 
 **"Any stream" - what that means here:** every unprotected stream a browser can play is downloadable, either via its
 manifest/file or via MSE capture of what the player plays. DRM-protected media (Widevine, PlayReady, FairPlay,
@@ -112,10 +131,12 @@ src/
     host.ts        message handler + job registry (cancel/stop/release)
   offscreen/       Chrome offscreen document hosting the engine
   content/
-    page.ts        reports <video> sources, thumbnail; relays capture events
-    mse-hook.ts    page-world MediaSource/SourceBuffer recorder (only on sites you enable)
+    page.ts        reports <video> sources, thumbnail, JSON-LD/og:video; relays capture/site events
+    extract.ts     page-world site extractors glue (YouTube, Vimeo, Bilibili, Facebook/Instagram, VK, OK)
+    picker.ts      on-page element picker for smart naming
+    mse-hook.ts    page-world MediaSource/SourceBuffer recorder + turbo playback driver (only on enabled sites)
     mse-save.ts    injected on demand: remuxes captured buffers and saves them
-  shared/          pure logic: HLS + DASH parsers, detection, quality picking, naming, settings, types
+  shared/          pure logic: HLS + DASH parsers, site extractors, detection, quality, naming, settings, types
   ui/              React popup/sidebar (Media, Downloads, History, Settings)
   i18n/            33 locales as flat JSON (compiled to _locales by the build)
 ```
@@ -146,8 +167,13 @@ Test fixtures in `test/fixtures` were generated with ffmpeg (see `test/fixtures/
 
 ## Known limitations
 
-- MSE capture records only what is played. Seeking while recording can produce gaps.
-- HLS `SAMPLE-AES` and any Widevine/PlayReady/FairPlay content is DRM and is refused by design.
+- MSE capture records only what is played. Seeking while recording can produce gaps (Turbo capture avoids this by
+  playing from the start). Turbo capture follows the player's adaptive quality; it requests the best level on
+  YouTube, other players may pick lower levels on slow connections.
+- Site extractors were tested against synthetic player data (unit tests + an in-browser run against a mapped
+  `www.youtube.com`), not against the live sites; sites change their page data, so an extractor can break - Turbo
+  capture and the generic HLS/DASH detection keep working in that case.
+- HLS `SAMPLE-AES` and any Widevine/PlayReady/FairPlay content is DRM and is refused by design (as in VDH).
 - Live recordings start at the live edge (like a player), not at the beginning of the DVR window.
 - Audio-only MP3 conversion applies to stream/file downloads; MSE captures are saved in their original codec.
 - Firefox: unsigned add-ons only load temporarily in release builds (see Install). The Firefox build passes

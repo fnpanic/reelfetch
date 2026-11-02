@@ -26,6 +26,11 @@ export interface RemuxOptions {
   preferMkv?: boolean;
   signal?: AbortSignal;
   onProgress?: (fraction: number) => void;
+  /**
+   * What a backwards timestamp jump means: a new piece to append after the previous one ('rebase':
+   * HLS discontinuities, DASH periods) or data the player fetched twice ('drop': MSE captures).
+   */
+  overlap?: 'rebase' | 'drop';
 }
 
 interface Choice {
@@ -104,7 +109,8 @@ export async function remux(
           const n = await it.next();
           if (n.done) return null;
           let ts = n.value.timestamp + shift;
-          if (end !== -Infinity && (ts < end - 1 || ts > end + 10)) {
+          if (opts.overlap === 'drop' && end !== -Infinity && ts < end - 1) return read();
+          if (opts.overlap !== 'drop' && end !== -Infinity && (ts < end - 1 || ts > end + 10)) {
             shift += end - ts;
             ts = end;
           }

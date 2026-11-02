@@ -9,6 +9,8 @@ import { existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
+import { createServer as createHttpsServer } from 'node:https';
+import { readFileSync, mkdtempSync } from 'node:fs';
 
 const root = resolve(import.meta.dirname, '..');
 const ext = join(root, 'dist', 'chrome');
@@ -20,7 +22,7 @@ const ffprobe = process.argv[3] ?? 'C:/Program Files/DownloadHelper CoApp/ffprob
 const shots = process.env.E2E_SHOTS ?? tmpdir();
 
 const log = [];
-const server = createServer(async (req, res) => {
+async function handler(req, res) {
   const url = new URL(req.url, 'http://x');
   log.push({ path: url.pathname, referer: req.headers.referer ?? '' });
   let path = url.pathname;
@@ -44,6 +46,40 @@ const server = createServer(async (req, res) => {
   ms.addEventListener('sourceopen', async () => {
     const sb = ms.addSourceBuffer('video/webm; codecs="vp9,opus"');
     sb.appendBuffer(await (await fetch('/mse.webm')).arrayBuffer());
+  });
+</script>`);
+  }
+  if (path === '/watch') {
+    // Synthetic YouTube watch page (www.youtube.com is mapped to this server): exercises the real
+    // page-world extractor + background intake + split video/audio merge.
+    const origin = `http://${req.headers.host}`;
+    const pr = {
+      playabilityStatus: { status: 'OK' },
+      videoDetails: { videoId: 'abc123', title: 'Never Gonna Give Up Testing', lengthSeconds: '10', thumbnail: { thumbnails: [{ url: `${origin}/thumb.png` }] } },
+      streamingData: {
+        adaptiveFormats: [
+          { itag: 137, url: `${origin}/site-video.mp4`, mimeType: 'video/mp4; codecs="avc1"', height: 180, width: 320, qualityLabel: '180p', bitrate: 400000 },
+          { itag: 140, url: `${origin}/site-audio.m4a`, mimeType: 'audio/mp4; codecs="mp4a.40.2"', bitrate: 64000, audioTrack: { audioIsDefault: true } },
+        ],
+      },
+    };
+    res.setHeader('Content-Type', 'text/html');
+    return res.end(`<!doctype html><title>Never Gonna Give Up Testing - YouTube</title><script>var ytInitialPlayerResponse = ${JSON.stringify(pr)};</script>`);
+  }
+  if (path === '/turbo.html') {
+    res.setHeader('Content-Type', 'text/html');
+    return res.end(`<!doctype html><title>Turbo Clip</title><video id="v" width="320"></video><script>
+  const ms = new MediaSource();
+  document.getElementById('v').src = URL.createObjectURL(ms);
+  ms.addEventListener('sourceopen', async () => {
+    // Two SourceBuffers (separate video and audio), like YouTube's player.
+    const feed = async (mime, url) => {
+      const sb = ms.addSourceBuffer(mime);
+      const data = await (await fetch(url)).arrayBuffer();
+      await new Promise((r) => { sb.addEventListener('updateend', r, { once: true }); sb.appendBuffer(data); });
+    };
+    await Promise.all([feed('video/webm; codecs="vp9"', '/turbo-v.webm'), feed('audio/webm; codecs="opus"', '/turbo-a.webm')]);
+    ms.endOfStream();
   });
 </script>`);
   }
@@ -81,8 +117,24 @@ const server = createServer(async (req, res) => {
     res.statusCode = 404;
     res.end();
   }
-});
+}
+const server = createServer(handler);
 await new Promise((r) => server.listen(0, '127.0.0.1', r));
+
+// HTTPS twin with a throwaway self-signed certificate: youtube.com is HSTS-preloaded, so the synthetic
+// watch page must be served over https (the test browser maps www.youtube.com here and ignores cert errors).
+let httpsPort = 0;
+let httpsServer;
+try {
+  const certDir = mkdtempSync(join(tmpdir(), 'rf-cert-'));
+  execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1', '-subj', '/CN=www.youtube.com',
+    '-keyout', join(certDir, 'k.pem'), '-out', join(certDir, 'c.pem')], { stdio: 'ignore' });
+  httpsServer = createHttpsServer({ key: readFileSync(join(certDir, 'k.pem')), cert: readFileSync(join(certDir, 'c.pem')) }, handler);
+  await new Promise((r) => httpsServer.listen(0, '127.0.0.1', r));
+  httpsPort = httpsServer.address().port;
+} catch {
+  console.log('SKIP  site-extractor test (openssl not available)');
+}
 const base = `http://127.0.0.1:${server.address().port}`;
 
 let failures = 0;
@@ -96,7 +148,7 @@ const ctx = await chromium.launchPersistentContext(await mkdtemp(join(tmpdir(), 
   executablePath: chromePath,
   headless: true,
   acceptDownloads: true,
-  args: [`--disable-extensions-except=${ext}`, `--load-extension=${ext}`],
+  args: [`--disable-extensions-except=${ext}`, `--load-extension=${ext}`, '--host-resolver-rules=MAP www.youtube.com 127.0.0.1', '--ignore-certificate-errors'],
 });
 
 try {
@@ -145,6 +197,13 @@ try {
   await ui.goto(`chrome-extension://${extId}/ui/popup.html?tabId=${tabId}`);
   await ui.waitForSelector('.row');
   await ui.screenshot({ path: join(shots, 'reelfetch-popup.png') });
+  await ui.click('.row .more');
+  await ui.screenshot({ path: join(shots, 'reelfetch-menu.png') });
+  await ui.click('.row .more');
+  await ui.click('.footer-actions .link');
+  await ui.setViewportSize({ width: 460, height: 900 });
+  await ui.screenshot({ path: join(shots, 'reelfetch-help.png') });
+  await ui.setViewportSize({ width: 460, height: 560 });
 
   // Download everything.
   for (const m of state.media) await api((id) => chrome.runtime.sendMessage({ type: 'download', mediaId: id }), m.id);
@@ -215,6 +274,106 @@ try {
     check(/vp9/.test(probe) && /opus/.test(probe) && d.suggestedFilename().endsWith('.webm'), `MSE capture saved as ${d.suggestedFilename()} ${probe}`);
   }
 
+  // Element picker: click the headline, a smart-naming rule is saved for the site.
+  await api(async () => {
+    const { settings } = await chrome.storage.local.get('settings');
+    await chrome.storage.local.set({ settings: { ...settings, smartNaming: [] } });
+    await chrome.runtime.sendMessage({ type: 'settings-changed' });
+  });
+  await page.bringToFront();
+  await api((id) => chrome.runtime.sendMessage({ type: 'pick-name', tabId: id }), tabId);
+  await page.waitForTimeout(300);
+  const h = await page.locator('h1.headline').boundingBox();
+  await page.mouse.move(h.x + 5, h.y + 5);
+  await page.mouse.click(h.x + 5, h.y + 5);
+  await sleep(800);
+  const rules = await api(async () => (await chrome.storage.local.get('settings')).settings.smartNaming);
+  const sel = rules.find((r) => r.host === '127.0.0.1')?.selector;
+  const picked = sel && (await page.evaluate((x) => document.querySelectorAll(x).length === 1 && document.querySelector(x).textContent, sel));
+  check(picked === 'Smart Name From Page', `element picker saved rule "${sel}"`);
+
+  // Site extractor (YouTube player data) -> merged video + audio download.
+  const ytUrl = `https://www.youtube.com:${httpsPort}/watch?v=abc123`;
+  const yt = await ctx.newPage();
+  if (httpsPort) await yt.goto(ytUrl);
+  const ytTab = await api((u) => chrome.tabs.query({ url: u }).then((t) => t[0]?.id), ytUrl);
+  let ytItem;
+  for (let i = 0; i < 40 && !ytItem; i++) {
+    await sleep(250);
+    const s = await api((id) => chrome.runtime.sendMessage({ type: 'get-state', tabId: id }), ytTab);
+    ytItem = s.media.find((m) => m.site === 'youtube');
+  }
+  check(!!ytItem && ytItem.variants?.[0]?.audioRef?.endsWith('site-audio.m4a'), `YouTube extractor: "${ytItem?.title}" ${ytItem?.variants?.map((v) => v.label)}`);
+  if (ytItem) {
+    await api((id) => chrome.runtime.sendMessage({ type: 'download', mediaId: id }), ytItem.id);
+    let yj;
+    for (let i = 0; i < 60; i++) {
+      await sleep(500);
+      const s = await api((id) => chrome.runtime.sendMessage({ type: 'get-state', tabId: id }), ytTab);
+      yj = s.jobs.find((j) => j.media.id === ytItem.id);
+      if (yj && yj.status !== 'running' && yj.status !== 'queued') break;
+    }
+    const [d] = yj?.downloadIds?.length ? await api((id) => chrome.downloads.search({ id }), yj.downloadIds[0]) : [];
+    const probe =
+      d?.filename && existsSync(d.filename) && existsSync(ffprobe)
+        ? execFileSync(ffprobe, ['-v', 'error', '-show_entries', 'stream=codec_name:format=duration', '-of', 'compact', d.filename], { encoding: 'utf8' }).trim().replace(/\r?\n/g, ' | ')
+        : '';
+    check(
+      yj?.status === 'done' && /h264/.test(probe) && /aac/.test(probe) && yj.basename.startsWith('Never Gonna Give Up Testing'),
+      `YouTube-style split download merged: ${yj?.basename} ${probe} ${yj?.error ?? ''}`,
+    );
+  }
+
+  // Hover preview: a short clip built by the engine from the HLS stream.
+  const previewUrl = await api((id) => chrome.runtime.sendMessage({ type: 'preview', mediaId: id }), hlsMaster.id);
+  check(typeof previewUrl === 'string' && previewUrl.startsWith('blob:'), `engine preview clip (${String(previewUrl).slice(0, 40)})`);
+
+  // Default action: copy URL instead of downloading.
+  await api(async () => {
+    const { settings } = await chrome.storage.local.get('settings');
+    await chrome.storage.local.set({ settings: { ...settings, defaultAction: 'copy' } });
+    await chrome.runtime.sendMessage({ type: 'settings-changed' });
+  });
+  const jobsBefore = (await api((id) => chrome.runtime.sendMessage({ type: 'get-state', tabId: id }), tabId)).jobs.length;
+  const act = await api((id) => chrome.runtime.sendMessage({ type: 'default-action', mediaId: id }), hlsMaster.id);
+  const jobsAfter = (await api((id) => chrome.runtime.sendMessage({ type: 'get-state', tabId: id }), tabId)).jobs.length;
+  check(act === 'copy' && jobsAfter === jobsBefore, `default action "copy" copies instead of downloading (${JSON.stringify(act)})`);
+  await api(async () => {
+    const { settings } = await chrome.storage.local.get('settings');
+    await chrome.storage.local.set({ settings: { ...settings, defaultAction: 'download' } });
+    await chrome.runtime.sendMessage({ type: 'settings-changed' });
+  });
+
+  // Turbo capture: reload with capture, play at 16x, save automatically when the video ends.
+  const turboPage = await ctx.newPage();
+  await turboPage.goto(`${base}/turbo.html`);
+  const turboTab = await api((u) => chrome.tabs.query({ url: u }).then((t) => t[0].id), `${base}/turbo.html`);
+  const turboDl = turboPage.waitForEvent('download', { timeout: 60000 });
+  const started = Date.now();
+  await api((id) => chrome.runtime.sendMessage({ type: 'turbo', tabId: id }), turboTab);
+  try {
+    const d = await turboDl;
+    const p = await d.path();
+    const probe = existsSync(ffprobe)
+      ? execFileSync(ffprobe, ['-v', 'error', '-show_entries', 'stream=codec_name:format=duration', '-of', 'compact', p], { encoding: 'utf8' }).trim().replace(/\r?\n/g, ' | ')
+      : '';
+    const s = await api((id) => chrome.runtime.sendMessage({ type: 'get-state', tabId: id }), turboTab);
+    const tj = s.jobs.find((j) => j.options.turbo);
+    const muted = await api((id) => chrome.tabs.get(id).then((t) => t.mutedInfo?.muted), turboTab);
+    check(
+      /vp9/.test(probe) && /opus/.test(probe) && tj?.status === 'done' && muted === false,
+      `turbo capture of a 5 s video saved in ${((Date.now() - started) / 1000).toFixed(1)} s: ${d.suggestedFilename()} ${probe} (tab unmuted again: ${muted === false})`,
+    );
+  } catch (e) {
+    const s = await api((id) => chrome.runtime.sendMessage({ type: 'get-state', tabId: id }), turboTab);
+    const tj = s.jobs.find((j) => j.options.turbo);
+    const probe = await turboPage.evaluate(() => {
+      const v = document.querySelector('video');
+      return { hook: typeof window.__reelfetchTurbo, t: v?.currentTime, d: v?.duration, paused: v?.paused, rate: v?.playbackRate, ended: v?.ended, src: v?.src };
+    }).catch((err) => String(err));
+    check(false, `turbo capture: ${e.message} job=${JSON.stringify({ status: tj?.status, progress: tj?.progress, error: tj?.error })} media=${JSON.stringify(s.media.map((m) => [m.kind, m.id, m.mse]))} page=${JSON.stringify(probe)}`);
+  }
+
   // Audio-only + MP3 transcoding (WebCodecs decode + LAME worker inside the offscreen document).
   await api(async () => {
     const { settings } = await chrome.storage.local.get('settings');
@@ -250,6 +409,7 @@ try {
 } finally {
   await ctx.close();
   server.close();
+  httpsServer?.close();
 }
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll e2e checks passed');
 process.exit(failures ? 1 : 0);

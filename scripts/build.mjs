@@ -38,7 +38,7 @@ await build({
 });
 
 // 2. Content scripts must be single classic scripts.
-for (const name of ['page', 'mse-hook', 'mse-save']) {
+for (const name of ['page', 'mse-hook', 'mse-save', 'extract', 'picker']) {
   await build({
     configFile: false,
     logLevel: 'warn',
@@ -75,8 +75,22 @@ const common = {
   host_permissions: ['<all_urls>'],
   // WASM is needed by the MP3 encoder (LAME); no other relaxation.
   content_security_policy: { extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'" },
-  optional_permissions: ['downloads.open'],
-  content_scripts: [{ matches: ['<all_urls>'], js: ['content/page.js'], run_at: 'document_idle', all_frames: true }],
+  optional_permissions: ['downloads.open', 'browsingData'],
+  content_scripts: [
+    { matches: ['<all_urls>'], js: ['content/page.js'], run_at: 'document_idle', all_frames: true },
+    {
+      // Site extractors read each site's player data in the page world.
+      matches: [
+        '*://*.youtube.com/*', '*://*.youtube-nocookie.com/*', '*://*.bilibili.com/*', '*://*.bilibili.tv/*',
+        '*://*.vimeo.com/*', '*://*.ok.ru/*', '*://*.vk.com/*', '*://*.vk.ru/*', '*://*.vkvideo.ru/*',
+        '*://*.facebook.com/*', '*://*.instagram.com/*',
+      ],
+      js: ['content/extract.js'],
+      run_at: 'document_idle',
+      all_frames: true,
+      world: 'MAIN',
+    },
+  ],
   commands: {
     _execute_action: { suggested_key: { default: 'Alt+Up', mac: 'Ctrl+Shift+Up' } },
     'default-action': {
@@ -96,6 +110,7 @@ const basePerms = [
   'declarativeNetRequestWithHostAccess',
   'notifications',
   'contextMenus',
+  'clipboardWrite',
 ];
 const manifests = {
   chrome: {

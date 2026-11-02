@@ -1,4 +1,6 @@
 /** Isolated-world content script: reports <video>/<audio> sources, page thumbnail, and relays MSE capture events. */
+import { genericMeta } from '../shared/sites';
+
 const send = (msg: unknown) => {
   try {
     if (chrome.runtime?.id) void chrome.runtime.sendMessage(msg).catch(() => {});
@@ -51,8 +53,37 @@ new MutationObserver(later).observe(document.documentElement, {
 document.addEventListener('loadedmetadata', later, true);
 document.addEventListener('play', later, true);
 
+// Generic page metadata (JSON-LD VideoObject, og:video) on every site, top frame only.
+let lastMeta = '';
+function scanMeta() {
+  if (window !== top) return;
+  const jsonLd = Array.from(document.querySelectorAll('script[type="application/ld+json"]'), (s) => s.textContent ?? '');
+  const og: Record<string, string> = {};
+  document.querySelectorAll<HTMLMetaElement>('meta[property^="og:video"], meta[name^="twitter:player:stream"]').forEach((m) => {
+    og[m.getAttribute('property') ?? m.name] = new URL(m.content, location.href).href;
+  });
+  const items = genericMeta(jsonLd, og, document.title);
+  const key = JSON.stringify(items);
+  if (items.length && key !== lastMeta) {
+    lastMeta = key;
+    send({ type: 'site-media', items });
+  }
+}
+scanMeta();
+setTimeout(scanMeta, 3000);
+
 window.addEventListener('message', (e) => {
-  if (e.source !== window || e.data?.__reelfetch !== 'mse') return;
+  if (e.source !== window) return;
+  if (e.data?.__reelfetch === 'site' && Array.isArray(e.data.items)) {
+    send({ type: 'site-media', items: e.data.items.slice(0, 20) });
+    return;
+  }
+  if (e.data?.__reelfetch === 'turbo' && typeof e.data.msId === 'string') {
+    const d = e.data;
+    send({ type: 'turbo', event: d.event === 'done' ? 'done' : 'progress', msId: d.msId.slice(0, 40), time: Number(d.time) || 0, duration: Number(d.duration) || 0 });
+    return;
+  }
+  if (e.data?.__reelfetch !== 'mse') return;
   const d = e.data;
   if (d.type === 'update' && typeof d.msId === 'string' && typeof d.bytes === 'number' && Array.isArray(d.mimes))
     send({ type: 'mse-update', msId: d.msId.slice(0, 40), bytes: d.bytes, mimes: d.mimes.map(String).slice(0, 8) });

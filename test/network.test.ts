@@ -19,6 +19,7 @@ const settings: EngineSettings = {
   downloadSubtitles: false,
   preferMkv: false,
   audioFormat: 'original',
+  preferOriginalAudio: true,
 };
 const media = (kind: MediaItem['kind'], url: string): MediaItem => ({
   id: 'n', tabId: 1, kind, url, pageUrl: '', pageTitle: '', headers: {}, detectedAt: 0,

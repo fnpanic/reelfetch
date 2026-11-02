@@ -8,10 +8,11 @@ import type { ContentMessage, EngineEvent, UiRequest } from '../shared/messages'
 import { buildBasename, cleanTitle } from '../shared/naming';
 import { visibleMedia } from '../shared/quality';
 import { loadSettings, type Settings } from '../shared/settings';
-import type { HistoryEntry, Job, MediaItem, RequestHeaders } from '../shared/types';
+import type { HistoryEntry, Job, MediaItem, RequestHeaders, Variant } from '../shared/types';
 import { hostMatches, hostOf, uid } from '../shared/util';
 import { engine, hasOffscreen, onEngineEvent, usesOffscreen } from './engine-client';
-import { clearHeaderRule, pruneHeaderRules, setHeaderRule } from './rules';
+import { clearHeaderRule, pruneHeaderRules, ruleId, setHeaderRule } from './rules';
+import type { SiteMedia } from '../shared/sites';
 
 // ------------------------------------------------------------------ state
 
@@ -21,7 +22,11 @@ let jobs: Job[] = [];
 let settings: Settings;
 const isFirefox = !chrome.offscreen;
 /** Jobs handled by the stream engine (everything except plain file downloads and MSE captures). */
-const isEngineJob = (j: Job) => j.media.kind !== 'mse' && !(j.media.kind === 'direct' && !j.options.audioOnly);
+const variantOf = (j: Job) => j.media.variants?.find((v) => v.id === j.options.variantId) ?? j.media.variants?.[0];
+/** Jobs handled by the stream engine: everything except plain single-file downloads and MSE captures. */
+const isEngineJob = (j: Job) =>
+  j.media.kind !== 'mse' && !(j.media.kind === 'direct' && !j.options.audioOnly && !variantOf(j)?.audioRef);
+const isTurbo = (j: Job) => j.media.kind === 'mse' && (!!j.options.turbo || !!j.media.captureOnly);
 
 const ready = (async () => {
   settings = await loadSettings();
@@ -33,7 +38,8 @@ const ready = (async () => {
   const engineAlive = usesOffscreen() && (await hasOffscreen());
   for (const j of jobs)
     // MSE saves reply through a message channel that died with the old worker.
-    if (j.status === 'running' && !j.downloadIds?.length && !(engineAlive && isEngineJob(j))) {
+    // A turbo capture keeps running in the page and reports in again, so it survives a worker restart.
+    if (j.status === 'running' && !j.downloadIds?.length && !(engineAlive && isEngineJob(j)) && !(isTurbo(j) && j.progress.phase === 'recording')) {
       j.status = 'error';
       j.error = t('err_interrupted');
     }
@@ -117,7 +123,8 @@ chrome.webRequest.onHeadersReceived.addListener(
       contentRange: get('content-range'),
       status: d.statusCode,
     });
-    if (!det) return;
+    // YouTube serves raw stream chunks from googlevideo; the YouTube extractor handles that site.
+    if (!det || /(^|\.)googlevideo\.com$/.test(new URL(d.url).hostname)) return;
     void ready.then(() => addMedia(d.tabId, d.frameId, d.url, det.kind, { mime: det.mime, size: det.size, headers }));
   },
   { urls: ['<all_urls>'] },
@@ -202,6 +209,17 @@ chrome.webNavigation.onCommitted.addListener((d) => {
   });
 });
 
+// SPA navigation (YouTube & co.): drop site-extracted items of the previous video.
+chrome.webNavigation.onHistoryStateUpdated.addListener((d) => {
+  if (d.frameId !== 0) return;
+  void ready.then(() => {
+    const list = media.get(d.tabId);
+    if (!list?.some((m) => m.site)) return;
+    media.set(d.tabId, list.filter((m) => !m.site));
+    changed(d.tabId);
+  });
+});
+
 chrome.tabs.onRemoved.addListener((tabId) => {
   void ready.then(() => {
     media.delete(tabId);
@@ -252,7 +270,7 @@ async function enqueue(item: MediaItem, options: Job['options']) {
     basename: buildBasename(
       settings.filenameTemplate,
       {
-        title: cleanTitle(item.pageTitle || hostOf(item.url), host) || 'video',
+        title: item.title || cleanTitle(item.pageTitle || hostOf(item.url), host) || 'video',
         host,
         quality: options.audioOnly ? 'audio' : variant?.label,
         smart: await smartName(item),
@@ -294,14 +312,19 @@ function pump() {
 }
 
 async function startJob(j: Job) {
+  if (isTurbo(j)) return startTurbo(j);
   if (j.media.kind === 'mse') return startMse(j);
-  const hosts = [new URL(j.media.url).hostname];
+  const v = variantOf(j);
+  const hosts = [j.media.url, v?.ref, v?.audioRef]
+    .filter((u): u is string => !!u && /^https?:/.test(u))
+    .map((u) => new URL(u).hostname);
   await setHeaderRule(`job-${j.id}`, hosts, j.media.headers);
   if (j.status !== 'running') return cleanup(j); // canceled while we were setting up
   if (!isEngineJob(j)) {
-    const ext = extFor(j.media.url, j.media.mime);
+    const url = v?.ref ?? j.media.url;
+    const ext = extFor(url, v?.mime ?? j.media.mime);
     const id = await chrome.downloads.download({
-      url: j.media.url,
+      url,
       filename: `${j.basename}.${ext}`,
       saveAs: !!(j.options.saveAs || settings.alwaysSaveAs),
       conflictAction: 'uniquify',
@@ -309,28 +332,96 @@ async function startJob(j: Job) {
     if (j.status !== 'running') return void chrome.downloads.cancel(id).catch(() => {});
     j.downloadIds = [id];
     j.filename = `${j.basename}.${ext}`;
-    j.progress = { bytes: 0, total: j.media.size, phase: 'download' };
+    j.progress = { bytes: 0, total: v?.size ?? j.media.size, phase: 'download' };
     watchDirect();
     changed();
     return;
   }
-  await engine({
-    op: 'start',
-    job: j,
-    settings: {
-      preferredQuality: settings.preferredQuality,
-      audioLangs: settings.audioLangs,
-      subtitleLangs: settings.subtitleLangs,
-      downloadSubtitles: settings.downloadSubtitles,
-      preferMkv: settings.preferMkv,
-      audioFormat: settings.audioFormat,
-    },
-  });
+  await engine({ op: 'start', job: j, settings: engineSettings() });
   if (j.status !== 'running') await engine({ op: 'cancel', jobId: j.id }).catch(() => {});
 }
 
-async function startMse(j: Job) {
-  const frameId = j.media.frameId ?? 0;
+// ------------------------------------------------------------------ turbo capture
+
+function waitForLoad(tabId: number, timeout = 45000): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      chrome.webNavigation.onCompleted.removeListener(on);
+      reject(new Error('Page did not load'));
+    }, timeout);
+    function on(d: { tabId: number; frameId: number }) {
+      if (d.tabId !== tabId || d.frameId !== 0) return;
+      clearTimeout(timer);
+      chrome.webNavigation.onCompleted.removeListener(on);
+      resolve();
+    }
+    chrome.webNavigation.onCompleted.addListener(on);
+  });
+}
+
+const MAIN = 'MAIN' as chrome.scripting.ExecutionWorld;
+
+/**
+ * Turbo capture: enable capture for the tab's sites, reload, then let the page-world hook play the
+ * video muted at high speed from the start; the capture is saved automatically when it ends.
+ */
+async function startTurbo(j: Job) {
+  const tabId = j.media.tabId;
+  const frames = (await chrome.webNavigation.getAllFrames({ tabId })) ?? [];
+  const hosts = [...new Set(frames.map((f) => hostOf(f.url)).filter(Boolean))];
+  j.turboHosts = hosts.filter((h) => !settings.captureSites.some((s) => hostMatches(h, s)));
+  if (j.turboHosts.length) await setCaptureScripts([...settings.captureSites, ...j.turboHosts]);
+  await chrome.tabs.update(tabId, { muted: true });
+  j.progress = { bytes: 0, phase: 'recording', recorded: 0, duration: j.media.duration };
+  changed();
+  const loaded = waitForLoad(tabId);
+  await chrome.tabs.reload(tabId);
+  await loaded;
+  if (j.status !== 'running') return;
+  await chrome.scripting.executeScript({
+    target: { tabId, allFrames: true },
+    world: MAIN,
+    func: (speed: number) => (window as unknown as { __reelfetchTurbo?: (s: number) => void }).__reelfetchTurbo?.(speed),
+    args: [settings.turboSpeed],
+  });
+}
+
+async function stopTurboInPage(tabId: number) {
+  await chrome.scripting
+    .executeScript({
+      target: { tabId, allFrames: true },
+      world: MAIN,
+      func: () => (window as unknown as { __reelfetchTurboStop?: () => void }).__reelfetchTurboStop?.(),
+    })
+    .catch(() => {});
+}
+
+/** Undo turbo side effects: tab mute and temporary capture registration. */
+async function endTurbo(j: Job) {
+  if (!j.turboHosts) return;
+  const hosts = j.turboHosts;
+  j.turboHosts = undefined;
+  await chrome.tabs.update(j.media.tabId, { muted: false }).catch(() => {});
+  if (hosts.length) await setCaptureScripts(settings.captureSites).catch(() => {});
+}
+
+async function onTurboEvent(msg: Extract<ContentMessage, { type: 'turbo' }>, tabId: number, frameId: number) {
+  const j = jobs.find((x) => x.status === 'running' && isTurbo(x) && x.media.tabId === tabId && x.progress.phase === 'recording');
+  if (!j || !msg.msId) return;
+  const cap = media.get(tabId)?.find((m) => m.id === `mse:${tabId}:${frameId}:${msg.msId}`);
+  if (msg.event === 'progress') {
+    j.progress = { bytes: cap?.mse?.bytes ?? 0, phase: 'recording', recorded: msg.time, duration: msg.duration || j.progress.duration };
+    changed();
+    return;
+  }
+  await endTurbo(j);
+  j.progress = { ...j.progress, phase: 'mux' };
+  changed();
+  await startMse(j, frameId, msg.msId).catch((e) => fail(j, e instanceof Error ? e.message : String(e)));
+}
+
+async function startMse(j: Job, frameOverride?: number, msOverride?: string) {
+  const frameId = frameOverride ?? j.media.frameId ?? 0;
   await chrome.scripting.executeScript({ target: { tabId: j.media.tabId, frameIds: [frameId] }, files: ['content/mse-save.js'] });
   j.progress = { bytes: j.media.mse?.bytes ?? 0, phase: 'mux' };
   changed();
@@ -338,7 +429,7 @@ async function startMse(j: Job) {
     j.media.tabId,
     {
       type: 'mse-save',
-      msId: j.media.id.split(':').pop(),
+      msId: msOverride ?? j.media.id.split(':').pop(),
       filename: j.basename.split('/').pop(),
       audioOnly: !!j.options.audioOnly,
       preferMkv: settings.preferMkv,
@@ -438,6 +529,10 @@ chrome.downloads.onChanged.addListener((delta) => {
 
 async function cleanup(j: Job) {
   void clearHeaderRule(`job-${j.id}`);
+  if (j.turboHosts) {
+    await stopTurboInPage(j.media.tabId);
+    await endTurbo(j);
+  }
   if (isEngineJob(j)) await engine({ op: 'release', jobId: j.id }).catch(() => {});
 }
 
@@ -459,7 +554,9 @@ async function finish(j: Job, size?: number) {
       downloadId: j.downloadIds?.[0],
     });
   }
-  if (settings.notifyOnComplete) notify(j.id, t('notif_done'), j.filename ?? j.basename);
+  if (settings.notifyOnComplete && (settings.privateNotifications || !j.media.incognito))
+    notify(j.id, t('notif_done'), j.filename ?? j.basename);
+  void countDownload();
   if (!settings.showCompleted) jobs = jobs.filter((x) => x !== j);
   changed();
   pump();
@@ -561,7 +658,7 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
   if (msg?.target === 'engine') return; // for the offscreen document
   const fromExtensionPage = sender.url?.startsWith(chrome.runtime.getURL(''));
   if (!fromExtensionPage) {
-    if (sender.tab?.id != null && ['page-media', 'mse-update', 'drm-detected'].includes(msg?.type))
+    if (sender.tab?.id != null && ['page-media', 'mse-update', 'drm-detected', 'site-media', 'turbo', 'picker-result'].includes(msg?.type))
       void ready.then(() => onContent(msg as ContentMessage, sender.tab!.id!, sender.frameId ?? 0));
     return; // content scripts may only report, never command
   }
@@ -570,6 +667,53 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
     .then(reply, (e: unknown) => reply({ error: e instanceof Error ? e.message : String(e) }));
   return true;
 });
+
+async function addSiteMedia(tabId: number, frameId: number, items: unknown[]) {
+  const tab = await chrome.tabs.get(tabId).catch(() => null);
+  if (!tab) return;
+  const http = (u: unknown): u is string => typeof u === 'string' && /^https?:\/\//.test(u) && u.length < 8192;
+  const str = (v: unknown, max = 300) => (typeof v === 'string' ? v.slice(0, max) : undefined);
+  const num = (v: unknown) => (typeof v === 'number' && isFinite(v) ? v : undefined);
+  for (const raw of items.slice(0, 20)) {
+    const it = raw as SiteMedia;
+    if (!it || typeof it.site !== 'string' || typeof it.key !== 'string') continue;
+    const meta: Partial<MediaItem> = {
+      site: it.site.slice(0, 20),
+      title: str(it.title),
+      thumbnail: http(it.thumbnail) ? it.thumbnail : undefined,
+      duration: num(it.duration),
+      drm: it.drm === true || undefined,
+    };
+    if (http(it.hls)) await addMedia(tabId, frameId, it.hls, 'hls', meta);
+    else if (http(it.dash)) await addMedia(tabId, frameId, it.dash, 'dash', meta);
+    else if (typeof it.dashXml === 'string' && it.dashXml.length < 4e6)
+      // Inline manifest: a synthetic URL keeps items distinct; BaseURLs resolve against the page.
+      await addMedia(tabId, frameId, `about:reelfetch-${ruleId(it.key)}`, 'dash', { ...meta, manifest: it.dashXml });
+    else if (Array.isArray(it.variants)) {
+      const variants: Variant[] = it.variants
+        .filter((v) => v && http(v.url))
+        .slice(0, 40)
+        .map((v) => ({
+          id: v.url,
+          ref: v.url,
+          audioRef: http(v.audioUrl) ? v.audioUrl : undefined,
+          label: str(v.label, 40) ?? 'video',
+          height: num(v.height),
+          width: num(v.width),
+          bandwidth: num(v.bandwidth),
+          mime: str(v.mime, 80),
+          size: num(v.size),
+        }));
+      if (variants.length) await addMedia(tabId, frameId, variants[0].ref, 'direct', { ...meta, variants, size: variants[0].size, analyzed: true });
+    } else if (it.captureOnly === true)
+      await addMedia(tabId, frameId, `turbo:${it.key}`, 'mse', {
+        ...meta,
+        id: `turbo:${tabId}:${it.key.slice(0, 80)}`,
+        captureOnly: true,
+        mse: { bytes: 0, mimes: [] },
+      });
+  }
+}
 
 async function onContent(msg: ContentMessage, tabId: number, frameId: number) {
   const info = tabInfo.get(tabId) ?? {};
@@ -593,6 +737,20 @@ async function onContent(msg: ContentMessage, tabId: number, frameId: number) {
       pageUrl: tab?.url ?? '',
       pageTitle: tab?.title ?? '',
     });
+  } else if (msg.type === 'site-media') {
+    if (Array.isArray(msg.items)) await addSiteMedia(tabId, frameId, msg.items);
+  } else if (msg.type === 'turbo') {
+    await onTurboEvent(msg, tabId, frameId);
+  } else if (msg.type === 'picker-result') {
+    const tab = await chrome.tabs.get(tabId).catch(() => null);
+    const host = hostOf(tab?.url ?? '');
+    if (!host || typeof msg.selector !== 'string' || !msg.selector) return;
+    settings = {
+      ...settings,
+      smartNaming: [...settings.smartNaming.filter((r) => r.host !== host), { host, selector: msg.selector.slice(0, 500) }],
+    };
+    await chrome.storage.local.set({ settings });
+    notify(`picker-${Date.now()}`, t('smart_naming_saved'), `${host}: ${String(msg.text).slice(0, 120)}`);
   } else if (msg.type === 'drm-detected') {
     info.drm = true;
     for (const m of media.get(tabId) ?? []) if (m.kind === 'mse') m.drm = true;
@@ -626,7 +784,8 @@ async function onUi(msg: UiRequest): Promise<unknown> {
     case 'stop': {
       const j = findJob(msg.jobId);
       if (!j) return;
-      if (msg.type === 'stop' && j.progress.phase === 'recording') await engine({ op: 'stop', jobId: j.id });
+      if (msg.type === 'stop' && j.progress.phase === 'recording' && isTurbo(j)) await stopTurboInPage(j.media.tabId);
+      else if (msg.type === 'stop' && j.progress.phase === 'recording') await engine({ op: 'stop', jobId: j.id });
       else await cancel(j);
       return true;
     }
@@ -654,8 +813,50 @@ async function onUi(msg: UiRequest): Promise<unknown> {
       await chrome.storage.local.set({ history: (await getHistory()).filter((h) => h.id !== msg.id) });
       changed();
       return true;
-    case 'reload-tab':
+    case 'reload-tab': {
+      if (msg.clearCookies) {
+        const tab = await chrome.tabs.get(msg.tabId);
+        const url = new URL(tab.url ?? '');
+        const bd = chrome.browsingData as unknown as {
+          removeCookies?: (o: { hostnames: string[] }) => Promise<void>;
+        };
+        if (isFirefox && bd.removeCookies) await bd.removeCookies({ hostnames: [url.hostname] });
+        else await chrome.browsingData.remove({ origins: [url.origin] }, { cookies: true });
+      }
       await chrome.tabs.reload(msg.tabId, { bypassCache: true });
+      return true;
+    }
+    case 'preview': {
+      const item = [...media.values()].flat().find((m) => m.id === msg.mediaId);
+      if (!item || (item.kind !== 'hls' && item.kind !== 'dash')) return null;
+      const key = `preview-${item.id}`;
+      if (!item.manifest) await setHeaderRule(key, [new URL(item.url).hostname], item.headers);
+      try {
+        return await engine<string>({ op: 'preview', media: item, settings: engineSettings() });
+      } finally {
+        void clearHeaderRule(key);
+      }
+    }
+    case 'default-action': {
+      const item = [...media.values()].flat().find((m) => m.id === msg.mediaId);
+      if (!item) throw new Error('Media no longer available');
+      await runDefault(item, msg.variantId);
+      return settings.defaultAction;
+    }
+    case 'turbo': {
+      const item =
+        [...media.values()].flat().find((m) => m.id === msg.mediaId) ??
+        (await addMedia(msg.tabId, 0, `turbo:page:${msg.tabId}`, 'mse', {
+          id: `turbo:${msg.tabId}:page`,
+          captureOnly: true,
+          mse: { bytes: 0, mimes: [] },
+        }));
+      if (!item) throw new Error('Tab not available');
+      await enqueue(item, { turbo: true });
+      return true;
+    }
+    case 'pick-name':
+      await chrome.scripting.executeScript({ target: { tabId: msg.tabId }, files: ['content/picker.js'] });
       return true;
     case 'capture-site':
       await toggleCapture(msg.tabId, msg.enable);
@@ -733,7 +934,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (id === 'rf-best') return downloadBest(tabId);
     if (id.startsWith('rf-m:')) {
       const item = visible(tabId).find((m) => m.id === id.slice(5));
-      if (item) await enqueue(item, {});
+      if (item) await runDefault(item);
     }
     if (id === 'rf-src' && info.srcUrl && /^https?:/.test(info.srcUrl)) {
       const det = classify({ url: info.srcUrl }) ?? { kind: 'direct' as const };
@@ -743,9 +944,42 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   });
 });
 
+function engineSettings() {
+  return {
+    preferredQuality: settings.preferredQuality,
+    audioLangs: settings.audioLangs,
+    subtitleLangs: settings.subtitleLangs,
+    downloadSubtitles: settings.downloadSubtitles,
+    preferMkv: settings.preferMkv,
+    audioFormat: settings.audioFormat,
+    preferOriginalAudio: settings.preferOriginalAudio,
+  };
+}
+
+/** The user's default action (Alt+Down, right-click entries, main button). */
+async function runDefault(item: MediaItem, variantId?: string) {
+  if (settings.defaultAction === 'copy' && item.kind !== 'mse') {
+    await engine({ op: 'copy', text: item.variants?.find((v) => v.id === variantId)?.ref ?? item.url });
+    return;
+  }
+  await enqueue(item, {
+    variantId,
+    saveAs: settings.defaultAction === 'download_as' || undefined,
+    audioOnly: settings.defaultAction === 'audio' || undefined,
+  });
+}
+
 async function downloadBest(tabId: number) {
   const best = visible(tabId).find((m) => !m.drm);
-  if (best) await enqueue(best, {});
+  if (best) await runDefault(best);
+}
+
+/** VDH-style milestone: a one-time thank-you at 100 downloads. */
+async function countDownload() {
+  const stats = ((await chrome.storage.local.get('stats')).stats ?? {}) as { downloads?: number };
+  const n = (stats.downloads ?? 0) + 1;
+  await chrome.storage.local.set({ stats: { ...stats, downloads: n } });
+  if (n === 100) notify('milestone-100', t('one_hundred_downloads_title'), t('one_hundred_downloads_body'));
 }
 
 chrome.commands.onCommand.addListener((cmd) => {

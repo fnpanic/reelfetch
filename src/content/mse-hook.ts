@@ -69,6 +69,99 @@
     return append.call(this, data);
   };
 
+  // Map blob: URLs to their MediaSource so turbo capture knows which capture belongs to the main <video>.
+  const msByUrl = new Map<string, string>();
+  const createURL = URL.createObjectURL;
+  URL.createObjectURL = function (obj: Blob | MediaSource) {
+    const url = createURL.call(URL, obj);
+    if (!(obj instanceof Blob)) {
+      let id = msIds.get(obj);
+      if (!id) {
+        id = Math.random().toString(36).slice(2, 12);
+        msIds.set(obj, id);
+        sources.set(id, []);
+      }
+      msByUrl.set(url, id);
+    }
+    return url;
+  };
+
+  /** True when a chunk starts a new init segment (fMP4 ftyp/moov, WebM EBML header). */
+  const isInit = (b: ArrayBuffer) => {
+    const v = new Uint8Array(b, 0, Math.min(12, b.byteLength));
+    const box = String.fromCharCode(...v.subarray(4, 8));
+    return box === 'ftyp' || box === 'moov' || (v[0] === 0x1a && v[1] === 0x45 && v[2] === 0xdf && v[3] === 0xa3);
+  };
+
+  type Player = HTMLElement & {
+    getAvailableQualityLevels?: () => string[];
+    getPlaybackQuality?: () => string;
+    setPlaybackQualityRange?: (a: string, b: string) => void;
+  };
+
+  /**
+   * Turbo capture: play the main video from the start at high speed (muted by the extension at tab
+   * level), at the best quality the player offers, and report when it ended so the capture can be saved.
+   */
+  w.__reelfetchTurbo = (speed: number) => {
+    let video: HTMLVideoElement | undefined;
+    let started = false;
+    let stop = false;
+    let rate = speed;
+    const pick = () =>
+      Array.from(document.querySelectorAll('video'))
+        .filter((v) => msByUrl.has(v.src) || msByUrl.has(v.currentSrc))
+        .sort((a, b) => b.clientWidth * b.clientHeight - a.clientWidth * a.clientHeight)[0];
+    (w as { __reelfetchTurboStop?: () => void }).__reelfetchTurboStop = () => (stop = true);
+    let idle = 0;
+    const tick = window.setInterval(() => {
+      if (!video?.isConnected) video = pick();
+      if (!video) {
+        if (++idle > 300) window.clearInterval(tick); // this frame has no captured video
+        return;
+      }
+      const msId = msByUrl.get(video.src) ?? msByUrl.get(video.currentSrc) ?? '';
+      const player = document.querySelector<Player>('#movie_player');
+      const best = player?.getAvailableQualityLevels?.()?.[0];
+      if (best && best !== 'auto' && player?.getPlaybackQuality?.() !== best) player?.setPlaybackQualityRange?.(best, best);
+      document.querySelector<HTMLElement>('.ytp-ad-skip-button, .ytp-skip-ad-button, .ytp-ad-skip-button-modern')?.click();
+      if (document.querySelector('.ad-showing') && isFinite(video.duration)) {
+        video.currentTime = video.duration; // fast-forward pre-roll ads
+        return;
+      }
+      if (!started && video.readyState >= 1) {
+        started = true;
+        if (video.currentTime > 1) {
+          // Resumed mid-video: forget what was buffered so the capture starts cleanly at 0.
+          for (const b of sources.get(msId) ?? []) {
+            const keep = b.chunks.filter(isInit).slice(0, 1);
+            b.chunks = keep;
+            b.bytes = keep.reduce((n, c) => n + c.byteLength, 0);
+          }
+        }
+        video.currentTime = 0;
+      }
+      if (video.paused && !video.ended)
+        video.play().catch(() => {
+          video!.muted = true; // autoplay policy: muted playback is always allowed
+          void video!.play().catch(() => {});
+        });
+      try {
+        if (video.playbackRate !== rate) video.playbackRate = rate;
+      } catch {
+        rate = Math.max(1, rate / 2); // browser rejected this speed
+      }
+      const done = stop || (started && (video.ended || (isFinite(video.duration) && video.currentTime >= video.duration - 0.3)));
+      window.postMessage({ __reelfetch: 'turbo', event: done ? 'done' : 'progress', msId, time: video.currentTime, duration: video.duration }, '*');
+      if (done) {
+        window.clearInterval(tick);
+        video.playbackRate = 1;
+        video.pause();
+        flush();
+      }
+    }, 400);
+  };
+
   const setKeys = HTMLMediaElement.prototype.setMediaKeys;
   if (setKeys)
     HTMLMediaElement.prototype.setMediaKeys = function (this: HTMLMediaElement, keys: MediaKeys | null) {

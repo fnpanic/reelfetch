@@ -32,7 +32,7 @@ export function pickByLang<T extends { language?: string; lang?: string; default
 /** Hide items that are sub-playlists of an already listed master, then sort. */
 export function visibleMedia(items: MediaItem[], order: Settings['mediaOrder']): MediaItem[] {
   const children = new Set(items.flatMap((m) => m.children ?? []));
-  const shown = items.filter((m) => !children.has(m.url) && !(m.kind === 'mse' && !m.mse?.bytes));
+  const shown = items.filter((m) => !children.has(m.url) && !(m.kind === 'mse' && !m.mse?.bytes && !m.captureOnly));
   if (order === 'newest') return shown.sort((a, b) => b.detectedAt - a.detectedAt);
   if (order === 'oldest') return shown.sort((a, b) => a.detectedAt - b.detectedAt);
   const rank = (m: MediaItem) =>

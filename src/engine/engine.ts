@@ -6,13 +6,14 @@ import type { Job, MediaItem, Progress, Variant } from '../shared/types';
 import type { Settings } from '../shared/settings';
 import { sleep } from '../shared/util';
 import { decryptSegment, fetchBytes, fetchText } from './net';
+import { totalFromRange } from '../shared/detect';
 import { createSpool, sniffExt, type Spool } from './spool';
 import { remux } from './mux';
 import { convertToMp3 } from './mp3';
 
 export type EngineSettings = Pick<
   Settings,
-  'preferredQuality' | 'audioLangs' | 'subtitleLangs' | 'downloadSubtitles' | 'preferMkv' | 'audioFormat'
+  'preferredQuality' | 'audioLangs' | 'subtitleLangs' | 'downloadSubtitles' | 'preferMkv' | 'audioFormat' | 'preferOriginalAudio'
 >;
 
 export interface Control {
@@ -22,6 +23,8 @@ export interface Control {
   onProgress: (p: Progress) => void;
   /** Called with every host we are about to fetch from, so Referer/Origin rules can be installed. */
   prepare?: (hosts: string[]) => Promise<void>;
+  /** Preview mode: only fetch about this many seconds from the start (live: from the edge). */
+  previewSeconds?: number;
 }
 
 export class DrmError extends Error {
@@ -85,7 +88,7 @@ export async function analyze(media: MediaItem, signal?: AbortSignal): Promise<P
     return { duration: pl.duration, live: !pl.endList, drm: pl.drm, encrypted: pl.encrypted };
   }
   if (media.kind === 'dash') {
-    const { text, url } = await fetchText(media.url, signal);
+    const { text, url } = media.manifest ? { text: media.manifest, url: media.pageUrl || 'https://localhost/' } : await fetchText(media.url, signal);
     const m = parseMpd(text, url);
     const period = m.periods.reduce((a, b) => ((b.duration ?? 0) > (a.duration ?? 0) ? b : a), m.periods[0]);
     const videos = (period?.reps ?? []).filter((r) => r.contentType === 'video');
@@ -113,6 +116,14 @@ export async function analyze(media: MediaItem, signal?: AbortSignal): Promise<P
 
 // ---------------------------------------------------------------- planning
 
+/** Move original-language tracks first (HLS NAME "Original", DASH Role main) and drop audio description. */
+function preferOriginal<T extends { name?: string; role?: string; default?: boolean }>(items: T[], s: EngineSettings): T[] {
+  if (!s.preferOriginalAudio) return items;
+  const score = (t: T) =>
+    (/original|orig/i.test(t.name ?? '') || t.role === 'main' ? 2 : 0) + (t.default ? 1 : 0) - (/descri|commentary/i.test(`${t.name} ${t.role}`) ? 4 : 0);
+  return [...items].sort((a, b) => score(b) - score(a)).map((t, i, arr) => (i === 0 && !arr.some((x) => x.default) ? { ...t, default: true } : t));
+}
+
 /** One refresh of a live manifest. */
 interface LivePoll {
   segments: Segment[];
@@ -125,6 +136,8 @@ interface Track {
   name: 'video' | 'audio' | 'subs';
   /** Static segment list (VOD). */
   segments?: Segment[];
+  /** Whole-file download. */
+  url?: string;
   /** Live stream: manifest URL and how to poll it. */
   liveUrl?: string;
   poll?: (signal: AbortSignal) => Promise<LivePoll>;
@@ -170,7 +183,7 @@ async function planHls(job: Job, s: EngineSettings, signal: AbortSignal): Promis
     if (v.audio) {
       // A chosen rendition without URI means its audio is muxed into the variant itself.
       const group = pl.renditions.filter((x) => x.type === 'AUDIO' && x.groupId === v!.audio);
-      audioRendition = pickByLang(group, s.audioLangs);
+      audioRendition = pickByLang(preferOriginal(group, s), s.audioLangs);
     }
     if (s.downloadSubtitles && v.subtitles) {
       const group = pl.renditions.filter((x) => x.type === 'SUBTITLES' && x.groupId === v!.subtitles && x.uri);
@@ -192,7 +205,7 @@ async function planHls(job: Job, s: EngineSettings, signal: AbortSignal): Promis
 }
 
 async function planDash(job: Job, s: EngineSettings, signal: AbortSignal): Promise<Track[]> {
-  const r = await fetchText(job.media.url, signal);
+  const r = job.media.manifest ? { text: job.media.manifest, url: job.media.pageUrl || 'https://localhost/' } : await fetchText(job.media.url, signal);
   const m = parseMpd(r.text, r.url);
   // Live: choose from the current period only; the manifest is re-polled while recording.
   const reps = m.live ? (m.periods.at(-1)?.reps ?? []) : m.periods.flatMap((p) => p.reps);
@@ -208,7 +221,7 @@ async function planDash(job: Job, s: EngineSettings, signal: AbortSignal): Promi
   }
   const audios = pick('audio');
   if (audios.length) {
-    const lang = pickByLang(audios, s.audioLangs)?.lang;
+    const lang = pickByLang(preferOriginal(audios, s), s.audioLangs)?.lang;
     const best = audios
       .filter((a) => a.lang === lang)
       .sort((a, b) => (b.bandwidth ?? 0) - (a.bandwidth ?? 0))[0];
@@ -247,6 +260,8 @@ function dashLive(url: string, wanted: DashRep, name: Track['name']): Track {
 // ---------------------------------------------------------------- downloading
 
 interface Counter {
+  /** Known total bytes (direct/site files). */
+  total?: number;
   bytes: number;
   segments: number;
   segmentsTotal: number;
@@ -342,10 +357,17 @@ async function recordLive(t: Track, spool: Spool, ctl: Control, c: Counter, repo
   }
 }
 
-/** Download the whole resource with streaming progress. */
+const CHUNK = 8 << 20;
+
+/**
+ * Download a whole file. Uses 8 MB range requests when the server supports them (resumable per
+ * chunk, and required by throttling CDNs such as googlevideo), else streams the plain response.
+ */
 async function downloadDirect(url: string, spool: Spool, ctl: Control, c: Counter, report: () => void) {
-  const res = await fetch(url, { credentials: 'include', signal: ctl.signal });
-  if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+  const res = await fetch(url, { credentials: 'include', signal: ctl.signal, headers: { Range: `bytes=0-${CHUNK - 1}` } });
+  if (!res.ok || !res.body) throw new Error(`HTTP ${res.status} for ${url.slice(0, 120)}`);
+  const total = res.status === 206 ? totalFromRange(res.headers.get('content-range') ?? undefined) : undefined;
+  if (total != null) c.total = (c.total ?? 0) + total;
   const reader = res.body.getReader();
   for (;;) {
     const { done, value } = await reader.read();
@@ -354,6 +376,30 @@ async function downloadDirect(url: string, spool: Spool, ctl: Control, c: Counte
     c.bytes += value.byteLength;
     report();
   }
+  if (total == null) return;
+  for (let pos = spool.size; pos < total; pos = spool.size) {
+    const data = await fetchBytes(url, { range: { offset: pos, length: Math.min(CHUNK, total - pos) }, signal: ctl.signal });
+    if (!data.byteLength) throw new Error('Server returned an empty range');
+    await spool.append(data);
+    c.bytes += data.byteLength;
+    report();
+  }
+}
+
+async function truncateForPreview(tracks: Track[], seconds: number, signal: AbortSignal): Promise<Track[]> {
+  const out: Track[] = [];
+  for (const t of tracks) {
+    if (t.name === 'subs' || t.url) continue; // whole files are previewed by the UI directly
+    const segs = t.poll ? (await t.poll(signal)).segments.slice(-2) : (t.segments ?? []);
+    const take: Segment[] = [];
+    for (const seg of segs) {
+      take.push(seg);
+      if (take.reduce((n, x) => n + x.duration, 0) >= seconds || take.length >= 6) break;
+    }
+    out.push({ name: t.name, segments: take, lang: t.lang });
+  }
+  if (!out.length) throw new Error('No preview available');
+  return out;
 }
 
 function joinVtt(text: string): string {
@@ -380,7 +426,7 @@ export async function download(job: Job, s: EngineSettings, ctl: Control): Promi
     last = now;
     ctl.onProgress({
       bytes: c.bytes,
-      total: job.media.kind === 'direct' ? job.media.size : undefined,
+      total: c.total ?? (job.media.kind === 'direct' ? job.media.size : undefined),
       segments: c.segments,
       segmentsTotal: c.segmentsTotal || undefined,
       recorded: c.recorded || undefined,
@@ -400,14 +446,25 @@ export async function download(job: Job, s: EngineSettings, ctl: Control): Promi
     let tracks: Track[];
     if (job.media.kind === 'hls') tracks = await planHls(job, s, ctl.signal);
     else if (job.media.kind === 'dash') tracks = await planDash(job, s, ctl.signal);
-    else tracks = [{ name: 'video' }];
+    else {
+      // Plain file, or a site variant with separate video + audio files (YouTube/Bilibili style).
+      const v = job.media.variants?.find((x) => x.id === job.options.variantId) ?? job.media.variants?.[0];
+      const videoUrl = v?.ref ?? job.media.url;
+      tracks =
+        job.options.audioOnly && v?.audioRef
+          ? [{ name: 'audio', url: v.audioRef }]
+          : [{ name: 'video', url: videoUrl }, ...(v?.audioRef ? [{ name: 'audio' as const, url: v.audioRef }] : [])];
+    }
+
+    if (ctl.previewSeconds) tracks = await truncateForPreview(tracks, ctl.previewSeconds, ctl.signal);
 
     const hosts = new Set<string>();
     const addHost = (u?: string) => {
       if (u) hosts.add(new URL(u).hostname);
     };
-    addHost(job.media.url);
+    if (!job.media.manifest) addHost(job.media.url);
     for (const t of tracks) {
+      addHost(t.url);
       addHost(t.liveUrl);
       for (const seg of t.segments ?? []) {
         addHost(seg.url);
@@ -427,7 +484,7 @@ export async function download(job: Job, s: EngineSettings, ctl: Control): Promi
         const sp = await temp(t.name);
         raw.set(t, sp);
         const isVideo = t.name === 'video' || !tracks.some((x) => x.name === 'video');
-        if (job.media.kind === 'direct') await downloadDirect(job.media.url, sp, ctl, c, report);
+        if (t.url) await downloadDirect(t.url, sp, ctl, c, report);
         else if (t.poll) await recordLive(t, sp, ctl, c, report, isVideo);
         else await downloadSegments(t.segments!, sp, ctl, c, report, { mapKey: '' }, isVideo);
       }),

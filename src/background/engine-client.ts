@@ -22,7 +22,7 @@ async function ensureOffscreen() {
   creating ??= chrome.offscreen
     .createDocument({
       url: 'offscreen/offscreen.html',
-      reasons: ['BLOBS' as chrome.offscreen.Reason, 'DOM_PARSER' as chrome.offscreen.Reason],
+      reasons: ['BLOBS', 'DOM_PARSER', 'CLIPBOARD'] as chrome.offscreen.Reason[],
       justification: 'Download, decrypt and remux media streams in the background.',
     })
     .finally(() => (creating = null));

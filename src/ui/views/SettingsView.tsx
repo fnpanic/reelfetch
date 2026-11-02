@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { t } from '../../shared/i18n';
 import { resetSettings, type Settings } from '../../shared/settings';
 import { send } from '../hooks';
@@ -95,8 +95,64 @@ function Text({
   );
 }
 
+/** Ordered language preference list (VDH-style add / move up / move down / remove). */
+function LangList({ label, value, onChange }: { label: string; value: string[]; onChange: (v: string[]) => void }) {
+  const [draft, setDraft] = useState('');
+  const move = (i: number, d: number) => {
+    const next = [...value];
+    [next[i], next[i + d]] = [next[i + d], next[i]];
+    onChange(next);
+  };
+  const add = () => {
+    const code = draft.trim().toLowerCase();
+    if (code && !value.includes(code)) onChange([...value, code]);
+    setDraft('');
+  };
+  return (
+    <div className="field lang-field">
+      <span>{label}</span>
+      <div>
+        <ol className="langs">
+          {value.map((l, i) => (
+            <li key={l}>
+              <code>{l}</code>
+              <button className="icon-btn" title={t('move_lang_up')} disabled={i === 0} onClick={() => move(i, -1)}>
+                ↑
+              </button>
+              <button className="icon-btn" title={t('move_lang_down')} disabled={i === value.length - 1} onClick={() => move(i, 1)}>
+                ↓
+              </button>
+              <button className="icon-btn" title={t('remove_lang')} onClick={() => onChange(value.filter((x) => x !== l))}>
+                <Icon name="x" size={12} />
+              </button>
+            </li>
+          ))}
+        </ol>
+        <div className="rule">
+          <input
+            aria-label={t('add_lang')}
+            placeholder="en, de, fr…"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && add()}
+          />
+          <button disabled={!draft.trim()} onClick={add}>
+            {t('add_lang')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const isFirefox = !chrome.offscreen;
+
 export function SettingsView({ settings: s, update }: Props) {
   const [rule, setRule] = useState({ host: '', selector: '' });
+  const [incognito, setIncognito] = useState(true);
+  useEffect(() => {
+    void chrome.extension.isAllowedIncognitoAccess().then(setIncognito);
+  }, []);
   return (
     <div className="settings">
       <Section title={t('appearance_title')}>
@@ -114,6 +170,13 @@ export function SettingsView({ settings: s, update }: Props) {
           update={update}
           options={[['highest', t('preferred_quality_highest')], ['1080', t('preferred_quality_1080p')], ['720', t('preferred_quality_720p')], ['480', t('preferred_quality_480p')]]}
         />
+        <Select
+          label={t('default_action')}
+          k="defaultAction"
+          s={s}
+          update={update}
+          options={[['download', t('action_download')], ['download_as', t('action_download_as')], ['audio', t('action_audio')], ['copy', t('action_copy')]]}
+        />
         <Select label={t('max_parallel_downloads')} k="maxParallel" s={s} update={update} options={[1, 2, 3, 4, 6, 8].map((n) => [n, String(n)])} />
         <Text label={t('download_subdirectory')} value={s.subdirectory} placeholder="Videos/ReelFetch" onCommit={(v) => update({ subdirectory: v })} />
         <Text label={t('filename_template')} value={s.filenameTemplate} placeholder="{title}" onCommit={(v) => update({ filenameTemplate: v || '{title}' })} />
@@ -123,14 +186,29 @@ export function SettingsView({ settings: s, update }: Props) {
         <Check label={t('always_download_as_menu')} k="alwaysSaveAs" s={s} update={update} />
         <Check label={t('show_notification')} k="notifyOnComplete" s={s} update={update} />
         <Check label={t('transient_history_description')} k="showCompleted" s={s} update={update} />
-        <button className="link" onClick={() => chrome.downloads.showDefaultFolder()}>
-          {t('download_directory_button_tooltip')}
-        </button>
+        <div className="buttons">
+          <button className="link" onClick={() => chrome.downloads.showDefaultFolder()}>
+            {t('download_directory_button_tooltip')}
+          </button>
+          <button
+            className="link"
+            onClick={() => chrome.tabs.create({ url: isFirefox ? 'about:preferences#general' : 'chrome://settings/downloads' })}
+          >
+            {t('change_browser_download_directory')}
+          </button>
+        </div>
+      </Section>
+
+      <Section title={t('preview_mode_title')}>
+        <Select label={t('preview_mode_title')} k="previewMode" s={s} update={update} options={[['none', t('preview_mode_none')], ['image', t('preview_mode_image')], ['video', t('preview_mode_video')]]} />
+        <Select label={t('turbo_speed')} k="turboSpeed" s={s} update={update} options={[2, 4, 8, 16].map((n) => [n, `${n}×`])} />
+        <p className="hint">{t('turbo_capture_hint')}</p>
       </Section>
 
       <Section title={t('languages_title')}>
-        <Text label={t('settings_audio_tracks_title')} value={s.audioLangs.join(', ')} placeholder="en, de" onCommit={(v) => update({ audioLangs: list(v) })} />
-        <Text label={t('settings_subtitles_title')} value={s.subtitleLangs.join(', ')} placeholder="en" onCommit={(v) => update({ subtitleLangs: list(v) })} />
+        <LangList label={t('settings_audio_tracks_title')} value={s.audioLangs} onChange={(v) => update({ audioLangs: v })} />
+        <Check label={t('prefer_original_audio')} k="preferOriginalAudio" s={s} update={update} />
+        <LangList label={t('settings_subtitles_title')} value={s.subtitleLangs} onChange={(v) => update({ subtitleLangs: v })} />
         <Check label={t('download_subtitles')} k="downloadSubtitles" s={s} update={update} />
       </Section>
 
@@ -165,6 +243,18 @@ export function SettingsView({ settings: s, update }: Props) {
             {t('add')}
           </button>
         </div>
+      </Section>
+
+      <Section title={t('private_browsing_title')}>
+        {!incognito && (
+          <div className="banner warn">
+            <span>{t('private_browsing_warning')}</span>
+            <button onClick={() => chrome.tabs.create({ url: isFirefox ? 'about:addons' : `chrome://extensions/?id=${chrome.runtime.id}` })}>
+              {t('private_browsing_button')}
+            </button>
+          </div>
+        )}
+        <Check label={t('private_browsing_notifications')} k="privateNotifications" s={s} update={update} />
       </Section>
 
       <Section title={t('settings_history_title')}>
