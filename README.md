@@ -11,7 +11,20 @@ Built with React, TypeScript, Vite and [mediabunny](https://mediabunny.dev) (a p
 
 ## Install
 
-### From a release (easiest)
+### Windows setup (easiest, with automatic updates)
+
+1. Download **`ReelFetch-Setup-<version>.exe`** from https://reelfetch-updates.thomas-schend.workers.dev and run it
+   (no admin rights needed; Windows SmartScreen may ask once because the setup is not code-signed: *More info* →
+   *Run anyway*).
+2. The setup copies the extension to `%LOCALAPPDATA%\ReelFetch\extension`, puts that path on the clipboard and opens
+   the browser's extensions page (Chrome, else Edge, else Brave). There: switch on **Developer mode**, click
+   **Load unpacked**, paste the path and pick **Select folder**. Browsers do not let any installer add an extension
+   from outside their store silently, so this one confirmation is required once.
+3. Done. ReelFetch checks for updates every 6 hours (Settings → **Updates** → *Check for updates* does it now) and
+   installs them itself when no download is running - or shows an **Update now** banner if automatic updates are off.
+   Uninstall via *Settings → Apps*; then remove the extension from the browser's extensions page.
+
+### From a release zip
 
 1. Download `reelfetch-chrome-<version>.zip` or `reelfetch-firefox-<version>.zip` from the
    [Releases](../../releases) page (or build it yourself, see below).
@@ -30,6 +43,21 @@ npm run build        # -> dist/chrome, dist/firefox, dist/reelfetch-{chrome,fire
 ```
 
 Requires Node.js 20.19+ or 22.12+.
+
+### Publishing a release (Windows setup + updates)
+
+```bash
+# bump "version" in package.json first; needs Inno Setup 6 and Cloudflare credentials
+# (CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID, or `npx wrangler login`)
+npm run release          # -> release/: setup .exe, zips, latest.json, download page
+npm run release:deploy   # same, then publishes release/ as the Cloudflare Worker in package.json "reelfetch"
+```
+
+How updates work: the extension (`src/background/update.ts`) reads `latest.json` from `reelfetch.updateUrl`. The setup
+registers a native messaging host (`installer/updater.ps1`, allowed for this extension's fixed ID only) for Chrome,
+Edge, Brave and Chromium. On *update* it downloads `latest.json` and the zip it names **from the URL fixed at install
+time**, checks the SHA-256, mirrors the files into the extension folder, and the extension reloads itself. Installs
+without the setup (zip, Firefox) only show a banner linking to the new download.
 
 ## Use
 
