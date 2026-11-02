@@ -87,6 +87,8 @@ input[type='text'], select, textarea {
   border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 5px 8px; min-width: 0;
 }
 
+/* The height cap flows body -> #root -> .app, so only <main> scrolls (vertically). */
+#root { max-height: inherit; }
 .app { display: flex; flex-direction: column; max-height: inherit; min-width: 0; }
 header {
   position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 8px;

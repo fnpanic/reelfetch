@@ -324,9 +324,11 @@ export function SettingsView({ settings: s, update, updateState }: Props & { upd
           </button>
           <button onClick={() => chrome.runtime.reload()}>{t('restart_addon')}</button>
         </div>
-        <p className="muted">
-          {t('version_title')}: {chrome.runtime.getManifest().version}
-        </p>
+        {!UPDATE_BASE && (
+          <p className="muted">
+            {t('version_title')}: {chrome.runtime.getManifest().version}
+          </p>
+        )}
       </Section>
     </div>
   );

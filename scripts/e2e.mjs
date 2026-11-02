@@ -336,6 +336,14 @@ try {
       await sleep(200);
       await probe(`tab${i}`);
     }
+    // Settings are taller than the popup: they must scroll vertically and reach the last section.
+    const scroll = await ui.evaluate(() => {
+      const main = document.querySelector('main');
+      main.scrollTo(0, main.scrollHeight);
+      const last = [...document.querySelectorAll('.settings section')].pop().getBoundingClientRect();
+      return { scrollable: main.scrollHeight > main.clientHeight, top: main.scrollTop, lastVisible: last.bottom <= innerHeight + 1 && last.top < innerHeight };
+    });
+    check(scroll.scrollable && scroll.top > 0 && scroll.lastVisible, `settings scroll to the last section at size ${size} ${JSON.stringify(scroll)}`);
     if (size === 'medium') await ui.screenshot({ path: join(shots, 'reelfetch-long-settings.png') });
     check(!bad.length, `no horizontal overflow at popup size ${size} ${bad.join(' | ')}`);
   }
