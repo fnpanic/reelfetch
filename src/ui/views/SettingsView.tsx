@@ -3,6 +3,8 @@ import { t } from '../../shared/i18n';
 import { resetSettings, type Settings } from '../../shared/settings';
 import { send } from '../hooks';
 import { Icon } from '../Icon';
+import { UPDATE_BASE, type UpdateState } from '../../shared/update';
+import { useUpdateAction } from './UpdateBanner';
 
 interface Props {
   settings: Settings;
@@ -147,7 +149,49 @@ function LangList({ label, value, onChange }: { label: string; value: string[]; 
 
 const isFirefox = !chrome.offscreen;
 
-export function SettingsView({ settings: s, update }: Props) {
+function Updates({ s, update, state }: { s: Settings; update: Props['update']; state?: UpdateState }) {
+  const [checking, setChecking] = useState(false);
+  const u = state ?? { current: chrome.runtime.getManifest().version, native: false };
+  const action = useUpdateAction(u);
+  if (!UPDATE_BASE) return null;
+  const status = checking
+    ? t('update_checking')
+    : u.latest
+      ? `${t('update_available')} ${u.latest.version}`
+      : u.checkedAt
+        ? t('update_uptodate')
+        : '';
+  return (
+    <Section title={t('updates_title')}>
+      <div className="field">
+        <span>
+          {t('version_title')} {u.current}
+        </span>
+        <span className="muted">{status}</span>
+      </div>
+      {action.error && <div className="error-text">{action.error}</div>}
+      <div className="buttons">
+        <button
+          disabled={checking}
+          onClick={async () => {
+            setChecking(true);
+            await send({ type: 'update-check' }).finally(() => setChecking(false));
+          }}
+        >
+          <Icon name="refresh" /> {t('update_check')}
+        </button>
+        {u.latest && (
+          <button className="primary" disabled={u.installing} onClick={action.run}>
+            {u.installing ? t('update_installing') : action.label}
+          </button>
+        )}
+      </div>
+      {u.native ? <Check label={t('update_auto')} k="autoUpdate" s={s} update={update} /> : <p className="hint">{t('update_manual_hint')}</p>}
+    </Section>
+  );
+}
+
+export function SettingsView({ settings: s, update, updateState }: Props & { updateState?: UpdateState }) {
   const [rule, setRule] = useState({ host: '', selector: '' });
   const [incognito, setIncognito] = useState(true);
   useEffect(() => {
@@ -262,6 +306,8 @@ export function SettingsView({ settings: s, update }: Props) {
         <Select label={t('history_limit')} k="historyDays" s={s} update={update} options={[1, 7, 30, 90, 365].map((n) => [n, String(n)])} />
         <button onClick={() => send({ type: 'clear-history' })}>{t('clear_history')}</button>
       </Section>
+
+      <Updates s={s} update={update} state={updateState} />
 
       <Section title={t('controls_title')}>
         <p className="hint">{t('hotkeys_hint')}</p>

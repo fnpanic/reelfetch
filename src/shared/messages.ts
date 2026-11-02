@@ -35,7 +35,9 @@ export type UiRequest =
   | { type: 'turbo'; mediaId?: string; tabId: number }
   | { type: 'pick-name'; tabId: number }
   | { type: 'capture-site'; tabId: number; enable: boolean }
-  | { type: 'settings-changed' };
+  | { type: 'settings-changed' }
+  | { type: 'update-check' }
+  | { type: 'update-apply' };
 
 /** Content script -> background. */
 export type ContentMessage =

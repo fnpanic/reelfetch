@@ -151,5 +151,17 @@
   "private_browsing_title": "Gizli gezinme",
   "private_browsing_warning": "ReelFetch gizli pencerelerde etkin değil. Bu seçeneği uzantı ayarlarından açın.",
   "private_browsing_button": "Gizli gezinme ayarını değiştir",
-  "private_browsing_notifications": "Gizli indirmeler için bildirim göster"
+  "private_browsing_notifications": "Gizli indirmeler için bildirim göster",
+  "err_stalled": "Durduruldu: çok uzun süredir ilerleme yok. Tekrar deneyin veya turbo yakalamayı kullanın.",
+  "err_tab_closed": "Yakalama bitmeden sekme kapatıldı.",
+  "update_available": "Yeni sürüm mevcut:",
+  "update_now": "Şimdi güncelle",
+  "update_installing": "Güncelleme yükleniyor…",
+  "update_check": "Güncellemeleri denetle",
+  "update_checking": "Denetleniyor…",
+  "update_uptodate": "ReelFetch güncel",
+  "update_auto": "Güncellemeleri otomatik yükle",
+  "update_busy": "Önce devam eden indirmeleri bitirin veya iptal edin.",
+  "updates_title": "Güncellemeler",
+  "update_manual_hint": "Güncellemek için yeni kurulumu indirip çalıştırın."
 }

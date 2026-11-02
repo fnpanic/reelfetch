@@ -95,3 +95,17 @@ export function extFor(url: string, mime?: string): string {
   if (e && (VIDEO_EXT.test('.' + e) || AUDIO_EXT.test('.' + e))) return e;
   return (mime && MIME_EXT[mime]) || 'mp4';
 }
+
+const EXT_MIME: Record<string, string> = {
+  // First (canonical) type wins over later aliases such as application/ogg.
+  ...Object.fromEntries(Object.entries(MIME_EXT).reverse().map(([m, e]) => [e, m])),
+  mkv: 'video/x-matroska',
+  ts: 'video/mp2t',
+  vtt: 'text/vtt',
+};
+
+/**
+ * MIME type for a file extension. Blobs handed to chrome.downloads must carry it: an untyped blob is
+ * sniffed as text/plain and Chrome then renames "clip.mp4" to "clip.txt".
+ */
+export const mimeForExt = (ext: string) => EXT_MIME[ext] ?? 'application/octet-stream';

@@ -151,5 +151,17 @@
   "private_browsing_title": "Privát böngészés",
   "private_browsing_warning": "A ReelFetch nincs engedélyezve a privát ablakokban. Kapcsold be ezt a beállítást a bővítmény beállításaiban.",
   "private_browsing_button": "Privát böngészés beállításának módosítása",
-  "private_browsing_notifications": "Értesítések megjelenítése a privát letöltésekről"
+  "private_browsing_notifications": "Értesítések megjelenítése a privát letöltésekről",
+  "err_stalled": "Leállítva: túl sokáig nem volt előrehaladás. Próbálja újra, vagy használja a turbó rögzítést.",
+  "err_tab_closed": "A lap bezárult, mielőtt a rögzítés befejeződött.",
+  "update_available": "Új verzió érhető el:",
+  "update_now": "Frissítés most",
+  "update_installing": "Frissítés telepítése…",
+  "update_check": "Frissítések keresése",
+  "update_checking": "Ellenőrzés…",
+  "update_uptodate": "A ReelFetch naprakész",
+  "update_auto": "Frissítések automatikus telepítése",
+  "update_busy": "Előbb fejezze be vagy szakítsa meg a folyamatban lévő letöltéseket.",
+  "updates_title": "Frissítések",
+  "update_manual_hint": "Töltse le és futtassa az új telepítőt a frissítéshez."
 }

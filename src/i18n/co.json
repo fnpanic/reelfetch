@@ -151,5 +151,17 @@
   "private_browsing_title": "Navigazione privata",
   "private_browsing_warning": "ReelFetch ùn hè micca attivatu in e finestre private. Attivate st'opzione in i paràmetri di l'estensione.",
   "private_browsing_button": "Cambià u paràmetru di navigazione privata",
-  "private_browsing_notifications": "Mostra e nutificazioni per i scaricamenti privati"
+  "private_browsing_notifications": "Mostra e nutificazioni per i scaricamenti privati",
+  "err_stalled": "Firmatu: troppu tempu senza prugressu. Pruvate torna o aduprate a cattura turbo.",
+  "err_tab_closed": "L’unghjetta hè stata chjosa nanzu chì a cattura finissi.",
+  "update_available": "Nova versione dispunibule:",
+  "update_now": "Aghjurnà avà",
+  "update_installing": "Installazione di l’aghjurnamentu…",
+  "update_check": "Verificà l’aghjurnamenti",
+  "update_checking": "Verificazione…",
+  "update_uptodate": "ReelFetch hè aghjurnatu",
+  "update_auto": "Installà l’aghjurnamenti autumaticamente",
+  "update_busy": "Prima finite o abbandunate i scaricamenti in corsu.",
+  "updates_title": "Aghjurnamenti",
+  "update_manual_hint": "Scaricate u novu installatore è lanciatelu per aghjurnà."
 }

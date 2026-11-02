@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { UiRequest } from '../shared/messages';
 import { loadSettings, saveSettings, type Settings } from '../shared/settings';
 import type { HistoryEntry, Job, MediaItem } from '../shared/types';
+import type { UpdateState } from '../shared/update';
 
 export interface AppState {
   media: MediaItem[];
@@ -11,9 +12,13 @@ export interface AppState {
   capture: boolean;
   drm: boolean;
   hostPermission: boolean;
+  update: UpdateState;
 }
 
-export const send = <T = unknown>(msg: UiRequest): Promise<T> => chrome.runtime.sendMessage(msg);
+const afterSend = new Set<() => void>();
+/** Sends a request, then refreshes the views: a restarted worker no longer knows our port. */
+export const send = <T = unknown>(msg: UiRequest): Promise<T> =>
+  chrome.runtime.sendMessage(msg).finally(() => afterSend.forEach((f) => f()));
 
 /** Active tab of this window; the sidebar follows tab switches. */
 function useActiveTabId(): number | undefined {
@@ -40,10 +45,18 @@ export function useAppState(): AppState | null {
     let alive = true;
     const load = () => send<AppState>({ type: 'get-state', tabId }).then((s) => alive && s && setState(s));
     void load();
-    const port = chrome.runtime.connect({ name: 'ui' });
-    port.onMessage.addListener(load);
+    let port: chrome.runtime.Port;
+    const connect = () => {
+      port = chrome.runtime.connect({ name: 'ui' });
+      port.onMessage.addListener(load);
+      // The service worker was stopped: reconnect so pushed updates keep arriving.
+      port.onDisconnect.addListener(() => alive && setTimeout(() => alive && (connect(), void load()), 200));
+    };
+    connect();
+    afterSend.add(load);
     return () => {
       alive = false;
+      afterSend.delete(load);
       port.disconnect();
     };
   }, [tabId]);

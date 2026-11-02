@@ -151,5 +151,17 @@
   "private_browsing_title": "비공개 브라우징",
   "private_browsing_warning": "ReelFetch는 비공개 창에서 사용 설정되어 있지 않습니다. 확장 프로그램 설정에서 해당 옵션을 켜 주세요.",
   "private_browsing_button": "비공개 브라우징 설정 변경",
-  "private_browsing_notifications": "비공개 다운로드 알림 표시"
+  "private_browsing_notifications": "비공개 다운로드 알림 표시",
+  "err_stalled": "중지됨: 너무 오랫동안 진행이 없습니다. 다시 시도하거나 터보 캡처를 사용하세요.",
+  "err_tab_closed": "캡처가 끝나기 전에 탭이 닫혔습니다.",
+  "update_available": "새 버전 사용 가능:",
+  "update_now": "지금 업데이트",
+  "update_installing": "업데이트 설치 중…",
+  "update_check": "업데이트 확인",
+  "update_checking": "확인 중…",
+  "update_uptodate": "ReelFetch가 최신 버전입니다",
+  "update_auto": "업데이트 자동 설치",
+  "update_busy": "먼저 진행 중인 다운로드를 완료하거나 취소하세요.",
+  "updates_title": "업데이트",
+  "update_manual_hint": "새 설치 프로그램을 다운로드하여 실행하면 업데이트됩니다."
 }

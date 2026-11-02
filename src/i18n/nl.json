@@ -151,5 +151,17 @@
   "private_browsing_title": "Privénavigatie",
   "private_browsing_warning": "ReelFetch is niet ingeschakeld in privévensters. Schakel die optie in bij de extensie-instellingen.",
   "private_browsing_button": "Instelling voor privénavigatie wijzigen",
-  "private_browsing_notifications": "Meldingen tonen voor privédownloads"
+  "private_browsing_notifications": "Meldingen tonen voor privédownloads",
+  "err_stalled": "Gestopt: te lang geen voortgang. Probeer het opnieuw of gebruik turbo-opname.",
+  "err_tab_closed": "Het tabblad is gesloten voordat de opname klaar was.",
+  "update_available": "Nieuwe versie beschikbaar:",
+  "update_now": "Nu bijwerken",
+  "update_installing": "Update wordt geïnstalleerd…",
+  "update_check": "Controleren op updates",
+  "update_checking": "Controleren…",
+  "update_uptodate": "ReelFetch is up-to-date",
+  "update_auto": "Updates automatisch installeren",
+  "update_busy": "Rond eerst de lopende downloads af of annuleer ze.",
+  "updates_title": "Updates",
+  "update_manual_hint": "Download de nieuwe installer en voer die uit om bij te werken."
 }

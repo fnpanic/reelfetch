@@ -151,5 +151,17 @@
   "private_browsing_title": "无痕浏览",
   "private_browsing_warning": "ReelFetch 未在无痕窗口中启用。请在扩展设置中开启该选项。",
   "private_browsing_button": "更改无痕浏览设置",
-  "private_browsing_notifications": "显示无痕下载的通知"
+  "private_browsing_notifications": "显示无痕下载的通知",
+  "err_stalled": "已停止：长时间没有进展。请重试或使用加速捕获。",
+  "err_tab_closed": "捕获完成前标签页已关闭。",
+  "update_available": "有新版本可用：",
+  "update_now": "立即更新",
+  "update_installing": "正在安装更新…",
+  "update_check": "检查更新",
+  "update_checking": "正在检查…",
+  "update_uptodate": "ReelFetch 已是最新版本",
+  "update_auto": "自动安装更新",
+  "update_busy": "请先完成或取消正在进行的下载。",
+  "updates_title": "更新",
+  "update_manual_hint": "下载并运行新的安装程序以更新。"
 }

@@ -1,6 +1,7 @@
 import type { EngineEvent, EngineRequest } from '../shared/messages';
 import { analyze, download, DrmError } from './engine';
 import { clearSpools, type Spool } from './spool';
+import { mimeForExt } from '../shared/detect';
 
 interface Running {
   abort: AbortController;
@@ -64,7 +65,7 @@ export function createEngineHost(emit: (e: EngineEvent) => Promise<unknown>) {
           { ...req.settings, preferredQuality: '480', downloadSubtitles: false, audioFormat: 'original' },
           { signal: AbortSignal.timeout(30000), stopped: () => true, onProgress: () => {}, previewSeconds: 6 },
         );
-        const url = URL.createObjectURL(out.files[0].blob);
+        const url = URL.createObjectURL(new Blob([out.files[0].blob], { type: mimeForExt(out.files[0].ext) }));
         await Promise.all(out.spools.map((s) => s.remove()));
         previews.set(req.media.id, url);
         // Small LRU: previews are a few hundred KB each.
@@ -95,7 +96,7 @@ export function createEngineHost(emit: (e: EngineEvent) => Promise<unknown>) {
               return;
             }
             r.spools = out.spools;
-            const files = out.files.map((f) => ({ url: URL.createObjectURL(f.blob), ext: f.ext, suffix: f.suffix }));
+            const files = out.files.map((f) => ({ url: URL.createObjectURL(new Blob([f.blob], { type: mimeForExt(f.ext) })), ext: f.ext, suffix: f.suffix }));
             r.urls = files.map((f) => f.url);
             return emit({ jobId: job.id, type: 'done', output: { files, size: out.size } });
           },

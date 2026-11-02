@@ -151,5 +151,17 @@
   "private_browsing_title": "Privat browsing",
   "private_browsing_warning": "ReelFetch er ikke aktiveret i private vinduer. Slå indstillingen til i udvidelsens indstillinger.",
   "private_browsing_button": "Skift indstilling for privat browsing",
-  "private_browsing_notifications": "Vis notifikationer for private downloads"
+  "private_browsing_notifications": "Vis notifikationer for private downloads",
+  "err_stalled": "Stoppet: ingen fremskridt i for lang tid. Prøv igen, eller brug turbooptagelse.",
+  "err_tab_closed": "Fanen blev lukket, før optagelsen var færdig.",
+  "update_available": "Ny version tilgængelig:",
+  "update_now": "Opdater nu",
+  "update_installing": "Installerer opdatering…",
+  "update_check": "Søg efter opdateringer",
+  "update_checking": "Kontrollerer…",
+  "update_uptodate": "ReelFetch er opdateret",
+  "update_auto": "Installer opdateringer automatisk",
+  "update_busy": "Afslut eller annuller de igangværende downloads først.",
+  "updates_title": "Opdateringer",
+  "update_manual_hint": "Hent det nye installationsprogram, og kør det for at opdatere."
 }

@@ -6,6 +6,7 @@ import { JobsView } from './views/JobsView';
 import { HistoryView } from './views/HistoryView';
 import { SettingsView } from './views/SettingsView';
 import { Icon } from './Icon';
+import { UpdateBanner } from './views/UpdateBanner';
 
 type View = 'media' | 'downloads' | 'history' | 'settings';
 
@@ -89,6 +90,7 @@ export function App({ sidebar }: { sidebar: boolean }) {
           <button onClick={() => chrome.permissions.request({ origins: ['<all_urls>'] })}>{t('grant')}</button>
         </div>
       )}
+      {state?.update.latest && <UpdateBanner update={state.update} />}
       <main>
         {!state ? (
           <div className="empty">{t('loading')}</div>
@@ -99,7 +101,7 @@ export function App({ sidebar }: { sidebar: boolean }) {
         ) : view === 'history' ? (
           <HistoryView history={state.history} settings={settings} update={update} />
         ) : (
-          <SettingsView settings={settings} update={update} />
+          <SettingsView settings={settings} update={update} updateState={state.update} />
         )}
       </main>
     </div>

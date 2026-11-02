@@ -151,5 +151,17 @@
   "private_browsing_title": "Priwatne přehladowanje",
   "private_browsing_warning": "ReelFetch w priwatnych woknach aktiwizowany njeje. Zapńće tutu opciju w nastajenjach rozšěrjenja.",
   "private_browsing_button": "Nastajenje priwatneho přehladowanja změnić",
-  "private_browsing_notifications": "Zdźělenki za priwatne sćehnjenja pokazać"
+  "private_browsing_notifications": "Zdźělenki za priwatne sćehnjenja pokazać",
+  "err_stalled": "Zastajene: předołho bjez postupa. Spytajće hišće raz abo wužiwajće turbo-nahrawanje.",
+  "err_tab_closed": "Rajtark je so začinił, prjedy hač bě nahrawanje dokónčene.",
+  "update_available": "Nowa wersija k dispoziciji:",
+  "update_now": "Nětko aktualizować",
+  "update_installing": "Aktualizacija so instaluje…",
+  "update_check": "Za aktualizacijemi pytać",
+  "update_checking": "Přepruwuje so…",
+  "update_uptodate": "ReelFetch je aktualny",
+  "update_auto": "Aktualizacije awtomatisce instalować",
+  "update_busy": "Dokónčće abo přetorhńće najprjedy běžace sćehnjenja.",
+  "updates_title": "Aktualizacije",
+  "update_manual_hint": "Sćehńće nowy instalaciski program a startujće jón za aktualizaciju."
 }

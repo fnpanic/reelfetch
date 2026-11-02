@@ -151,5 +151,17 @@
   "private_browsing_title": "مرور خصوصی",
   "private_browsing_warning": "ReelFetch در پنجره‌های خصوصی فعال نیست. این گزینه را در تنظیمات افزونه روشن کنید.",
   "private_browsing_button": "تغییر تنظیم مرور خصوصی",
-  "private_browsing_notifications": "نمایش اعلان برای دانلودهای خصوصی"
+  "private_browsing_notifications": "نمایش اعلان برای دانلودهای خصوصی",
+  "err_stalled": "متوقف شد: مدت زیادی پیشرفتی نبود. دوباره تلاش کنید یا از ضبط توربو استفاده کنید.",
+  "err_tab_closed": "زبانه پیش از پایان ضبط بسته شد.",
+  "update_available": "نسخهٔ جدید در دسترس است:",
+  "update_now": "اکنون به‌روزرسانی کن",
+  "update_installing": "در حال نصب به‌روزرسانی…",
+  "update_check": "بررسی به‌روزرسانی‌ها",
+  "update_checking": "در حال بررسی…",
+  "update_uptodate": "ReelFetch به‌روز است",
+  "update_auto": "نصب خودکار به‌روزرسانی‌ها",
+  "update_busy": "ابتدا بارگیری‌های در حال اجرا را تمام یا لغو کنید.",
+  "updates_title": "به‌روزرسانی‌ها",
+  "update_manual_hint": "برای به‌روزرسانی، برنامهٔ نصب جدید را بارگیری و اجرا کنید."
 }

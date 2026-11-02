@@ -82,6 +82,8 @@ export interface Job {
   filename?: string;
   /** Turbo capture: hosts temporarily added to the capture list for this job. */
   turboHosts?: string[];
+  /** Last time the job reported progress (ms); the watchdog fails jobs that went silent. */
+  heartbeat?: number;
 }
 
 export interface Progress {

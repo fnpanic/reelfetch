@@ -151,5 +151,17 @@
   "private_browsing_title": "Privat surfning",
   "private_browsing_warning": "ReelFetch är inte aktiverat i privata fönster. Aktivera det alternativet i tilläggets inställningar.",
   "private_browsing_button": "Ändra inställning för privat surfning",
-  "private_browsing_notifications": "Visa aviseringar för privata nedladdningar"
+  "private_browsing_notifications": "Visa aviseringar för privata nedladdningar",
+  "err_stalled": "Stoppad: inga framsteg på för länge. Försök igen eller använd turboinspelning.",
+  "err_tab_closed": "Fliken stängdes innan inspelningen var klar.",
+  "update_available": "Ny version tillgänglig:",
+  "update_now": "Uppdatera nu",
+  "update_installing": "Installerar uppdatering…",
+  "update_check": "Sök efter uppdateringar",
+  "update_checking": "Kontrollerar…",
+  "update_uptodate": "ReelFetch är uppdaterat",
+  "update_auto": "Installera uppdateringar automatiskt",
+  "update_busy": "Slutför eller avbryt pågående nedladdningar först.",
+  "updates_title": "Uppdateringar",
+  "update_manual_hint": "Ladda ner det nya installationsprogrammet och kör det för att uppdatera."
 }

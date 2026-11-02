@@ -151,5 +151,17 @@
   "private_browsing_title": "Navegação privada",
   "private_browsing_warning": "O ReelFetch não está ativado em janelas privadas. Ative essa opção nas configurações da extensão.",
   "private_browsing_button": "Alterar configuração de navegação privada",
-  "private_browsing_notifications": "Mostrar notificações de downloads privados"
+  "private_browsing_notifications": "Mostrar notificações de downloads privados",
+  "err_stalled": "Interrompido: sem progresso por muito tempo. Tente novamente ou use a captura turbo.",
+  "err_tab_closed": "A aba foi fechada antes de a captura terminar.",
+  "update_available": "Nova versão disponível:",
+  "update_now": "Atualizar agora",
+  "update_installing": "Instalando atualização…",
+  "update_check": "Verificar atualizações",
+  "update_checking": "Verificando…",
+  "update_uptodate": "O ReelFetch está atualizado",
+  "update_auto": "Instalar atualizações automaticamente",
+  "update_busy": "Primeiro conclua ou cancele os downloads em andamento.",
+  "updates_title": "Atualizações",
+  "update_manual_hint": "Baixe o novo instalador e execute-o para atualizar."
 }

@@ -151,5 +151,17 @@
   "private_browsing_title": "Przeglądanie prywatne",
   "private_browsing_warning": "ReelFetch nie jest włączony w oknach prywatnych. Włącz tę opcję w ustawieniach rozszerzenia.",
   "private_browsing_button": "Zmień ustawienie przeglądania prywatnego",
-  "private_browsing_notifications": "Pokazuj powiadomienia o pobraniach prywatnych"
+  "private_browsing_notifications": "Pokazuj powiadomienia o pobraniach prywatnych",
+  "err_stalled": "Zatrzymano: zbyt długo bez postępu. Spróbuj ponownie lub użyj przechwytywania turbo.",
+  "err_tab_closed": "Karta została zamknięta przed zakończeniem przechwytywania.",
+  "update_available": "Dostępna jest nowa wersja:",
+  "update_now": "Aktualizuj teraz",
+  "update_installing": "Instalowanie aktualizacji…",
+  "update_check": "Sprawdź aktualizacje",
+  "update_checking": "Sprawdzanie…",
+  "update_uptodate": "ReelFetch jest aktualny",
+  "update_auto": "Instaluj aktualizacje automatycznie",
+  "update_busy": "Najpierw zakończ lub anuluj trwające pobieranie.",
+  "updates_title": "Aktualizacje",
+  "update_manual_hint": "Pobierz nowy instalator i uruchom go, aby zaktualizować."
 }

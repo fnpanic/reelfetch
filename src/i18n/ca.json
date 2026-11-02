@@ -151,5 +151,17 @@
   "private_browsing_title": "Navegació privada",
   "private_browsing_warning": "ReelFetch no està activat a les finestres privades. Activa aquesta opció a la configuració de l'extensió.",
   "private_browsing_button": "Canvia la configuració de navegació privada",
-  "private_browsing_notifications": "Mostra notificacions de les baixades privades"
+  "private_browsing_notifications": "Mostra notificacions de les baixades privades",
+  "err_stalled": "Aturat: massa temps sense progrés. Torneu-ho a provar o feu servir la captura turbo.",
+  "err_tab_closed": "La pestanya s’ha tancat abans que acabés la captura.",
+  "update_available": "Nova versió disponible:",
+  "update_now": "Actualitza ara",
+  "update_installing": "S’està instal·lant l’actualització…",
+  "update_check": "Cerca actualitzacions",
+  "update_checking": "S’està comprovant…",
+  "update_uptodate": "ReelFetch està actualitzat",
+  "update_auto": "Instal·la les actualitzacions automàticament",
+  "update_busy": "Primer acabeu o cancel·leu les baixades en curs.",
+  "updates_title": "Actualitzacions",
+  "update_manual_hint": "Baixeu el nou instal·lador i executeu-lo per actualitzar."
 }

@@ -13,6 +13,7 @@ import { hostMatches, hostOf, uid } from '../shared/util';
 import { engine, hasOffscreen, onEngineEvent, usesOffscreen } from './engine-client';
 import { clearHeaderRule, pruneHeaderRules, ruleId, setHeaderRule } from './rules';
 import type { SiteMedia } from '../shared/sites';
+import { applyUpdate, checkForUpdate, scheduleUpdates, updateState } from './update';
 
 // ------------------------------------------------------------------ state
 
@@ -222,6 +223,9 @@ chrome.webNavigation.onHistoryStateUpdated.addListener((d) => {
 
 chrome.tabs.onRemoved.addListener((tabId) => {
   void ready.then(() => {
+    // A capture lives in the page: it can never finish once the tab is gone.
+    for (const j of jobs)
+      if (j.status === 'running' && j.media.kind === 'mse' && j.media.tabId === tabId) void fail(j, t('err_tab_closed'));
     media.delete(tabId);
     tabInfo.delete(tabId);
     changed();
@@ -304,12 +308,32 @@ function pump() {
     if (running >= settings.maxParallel) break;
     if (j.status !== 'queued') continue;
     j.status = 'running';
+    j.heartbeat = Date.now();
     running++;
     void startJob(j).catch((e) => fail(j, e instanceof Error ? e.message : String(e)));
   }
   updateKeepAlive();
   changed();
 }
+
+/**
+ * Jobs that went silent (page navigated away during a turbo capture, engine lost with its offscreen
+ * document) would otherwise hold a download slot forever and leave every new download "Waiting…".
+ */
+const STALL_MS = { turbo: 90_000, engine: 120_000 };
+setInterval(() => {
+  if (!settings) return;
+  const now = Date.now();
+  for (const j of jobs) {
+    if (j.status !== 'running' || !j.heartbeat) continue;
+    const silent = now - j.heartbeat;
+    if (isTurbo(j) && j.progress.phase === 'recording' && silent > STALL_MS.turbo) void fail(j, t('err_stalled'));
+    else if (isEngineJob(j) && !j.downloadIds && j.progress.phase !== 'convert' && silent > STALL_MS.engine) {
+      void engine({ op: 'cancel', jobId: j.id }).catch(() => {});
+      void fail(j, t('err_stalled'));
+    }
+  }
+}, 15_000);
 
 async function startJob(j: Job) {
   if (isTurbo(j)) return startTurbo(j);
@@ -410,6 +434,7 @@ async function onTurboEvent(msg: Extract<ContentMessage, { type: 'turbo' }>, tab
   if (!j || !msg.msId) return;
   const cap = media.get(tabId)?.find((m) => m.id === `mse:${tabId}:${frameId}:${msg.msId}`);
   if (msg.event === 'progress') {
+    j.heartbeat = Date.now();
     j.progress = { bytes: cap?.mse?.bytes ?? 0, phase: 'recording', recorded: msg.time, duration: msg.duration || j.progress.duration };
     changed();
     return;
@@ -475,6 +500,7 @@ async function onEngine(e: EngineEvent): Promise<unknown> {
   switch (e.type) {
     case 'progress':
       j.progress = e.progress;
+      j.heartbeat = Date.now();
       changed();
       return;
     case 'prepare':
@@ -509,6 +535,11 @@ async function onEngine(e: EngineEvent): Promise<unknown> {
   }
 }
 onEngineEvent(onEngine);
+
+scheduleUpdates(
+  () => !!settings?.autoUpdate && !jobs.some((j) => j.status === 'running' || j.status === 'queued'),
+  () => changed(),
+);
 
 chrome.downloads.onChanged.addListener((delta) => {
   void ready.then(async () => {
@@ -772,6 +803,7 @@ async function onUi(msg: UiRequest): Promise<unknown> {
         capture: !!host && settings.captureSites.some((s) => hostMatches(host, s)),
         drm: !!tabInfo.get(tabId)?.drm,
         hostPermission: await chrome.permissions.contains({ origins: ['<all_urls>'] }),
+        update: await updateState(),
       };
     }
     case 'download': {
@@ -861,6 +893,14 @@ async function onUi(msg: UiRequest): Promise<unknown> {
     case 'capture-site':
       await toggleCapture(msg.tabId, msg.enable);
       return true;
+    case 'update-check': {
+      const s = await checkForUpdate();
+      changed();
+      return s;
+    }
+    case 'update-apply':
+      if (jobs.some((j) => j.status === 'running' || j.status === 'queued')) throw new Error(t('update_busy'));
+      return applyUpdate().finally(() => changed());
     case 'settings-changed':
       settings = await loadSettings();
       await applyUiMode();

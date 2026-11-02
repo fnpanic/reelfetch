@@ -151,5 +151,17 @@
   "private_browsing_title": "Navigare privată",
   "private_browsing_warning": "ReelFetch nu este activat în ferestrele private. Activează această opțiune în setările extensiei.",
   "private_browsing_button": "Schimbă setarea pentru navigarea privată",
-  "private_browsing_notifications": "Afișează notificări pentru descărcările private"
+  "private_browsing_notifications": "Afișează notificări pentru descărcările private",
+  "err_stalled": "Oprit: niciun progres de prea mult timp. Încercați din nou sau folosiți captura turbo.",
+  "err_tab_closed": "Fila a fost închisă înainte de terminarea capturii.",
+  "update_available": "Versiune nouă disponibilă:",
+  "update_now": "Actualizează acum",
+  "update_installing": "Se instalează actualizarea…",
+  "update_check": "Caută actualizări",
+  "update_checking": "Se verifică…",
+  "update_uptodate": "ReelFetch este actualizat",
+  "update_auto": "Instalează automat actualizările",
+  "update_busy": "Mai întâi finalizați sau anulați descărcările în curs.",
+  "updates_title": "Actualizări",
+  "update_manual_hint": "Descărcați noul program de instalare și rulați-l pentru actualizare."
 }

@@ -151,5 +151,17 @@
   "private_browsing_title": "Einkavafur",
   "private_browsing_warning": "ReelFetch er ekki virkt í einkagluggum. Kveiktu á þeim valkosti í stillingum viðbótarinnar.",
   "private_browsing_button": "Breyta stillingu einkavafurs",
-  "private_browsing_notifications": "Sýna tilkynningar fyrir einkaniðurhal"
+  "private_browsing_notifications": "Sýna tilkynningar fyrir einkaniðurhal",
+  "err_stalled": "Stöðvað: engin framvinda of lengi. Reyndu aftur eða notaðu túrbó-upptöku.",
+  "err_tab_closed": "Flipanum var lokað áður en upptökunni lauk.",
+  "update_available": "Ný útgáfa í boði:",
+  "update_now": "Uppfæra núna",
+  "update_installing": "Set upp uppfærslu…",
+  "update_check": "Leita að uppfærslum",
+  "update_checking": "Athuga…",
+  "update_uptodate": "ReelFetch er uppfært",
+  "update_auto": "Setja upp uppfærslur sjálfkrafa",
+  "update_busy": "Ljúktu við eða hættu við niðurhöl í gangi fyrst.",
+  "updates_title": "Uppfærslur",
+  "update_manual_hint": "Sæktu nýja uppsetningarforritið og keyrðu það til að uppfæra."
 }

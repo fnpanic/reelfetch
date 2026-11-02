@@ -151,5 +151,17 @@
   "private_browsing_title": "プライベートブラウズ",
   "private_browsing_warning": "ReelFetchはプライベートウィンドウでは有効になっていません。拡張機能の設定でこのオプションをオンにしてください。",
   "private_browsing_button": "プライベートブラウズの設定を変更",
-  "private_browsing_notifications": "プライベートダウンロードの通知を表示"
+  "private_browsing_notifications": "プライベートダウンロードの通知を表示",
+  "err_stalled": "停止しました: 長時間進行がありません。再試行するか、ターボキャプチャを使ってください。",
+  "err_tab_closed": "キャプチャが終わる前にタブが閉じられました。",
+  "update_available": "新しいバージョンがあります:",
+  "update_now": "今すぐ更新",
+  "update_installing": "更新をインストール中…",
+  "update_check": "更新を確認",
+  "update_checking": "確認中…",
+  "update_uptodate": "ReelFetch は最新です",
+  "update_auto": "更新を自動的にインストール",
+  "update_busy": "先に実行中のダウンロードを完了またはキャンセルしてください。",
+  "updates_title": "更新",
+  "update_manual_hint": "新しいセットアップをダウンロードして実行すると更新されます。"
 }

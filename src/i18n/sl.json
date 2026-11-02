@@ -151,5 +151,17 @@
   "private_browsing_title": "Zasebno brskanje",
   "private_browsing_warning": "ReelFetch ni omogočen v zasebnih oknih. Vklopite to možnost v nastavitvah razširitve.",
   "private_browsing_button": "Spremeni nastavitev zasebnega brskanja",
-  "private_browsing_notifications": "Prikaži obvestila za zasebne prenose"
+  "private_browsing_notifications": "Prikaži obvestila za zasebne prenose",
+  "err_stalled": "Ustavljeno: predolgo ni napredka. Poskusite znova ali uporabite turbo zajem.",
+  "err_tab_closed": "Zavihek je bil zaprt, preden se je zajem končal.",
+  "update_available": "Na voljo je nova različica:",
+  "update_now": "Posodobi zdaj",
+  "update_installing": "Nameščanje posodobitve…",
+  "update_check": "Preveri posodobitve",
+  "update_checking": "Preverjanje…",
+  "update_uptodate": "ReelFetch je posodobljen",
+  "update_auto": "Samodejno nameščaj posodobitve",
+  "update_busy": "Najprej dokončajte ali prekličite prenose v teku.",
+  "updates_title": "Posodobitve",
+  "update_manual_hint": "Prenesite novi namestitveni program in ga zaženite za posodobitev."
 }

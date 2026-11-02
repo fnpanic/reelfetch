@@ -4,11 +4,22 @@ import react from '@vitejs/plugin-react';
 import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { zipSync } from 'fflate';
+import { createHash } from 'node:crypto';
 
 const root = resolve(import.meta.dirname, '..');
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
 const out = join(root, 'dist', 'chrome');
 rmSync(join(root, 'dist'), { recursive: true, force: true });
+
+// Self-hosted updates (see scripts/release.mjs); empty disables the update check.
+const updateBase = (process.env.REELFETCH_UPDATE_URL ?? pkg.reelfetch?.updateUrl ?? '').replace(/\/+$/, '');
+// Public key pins the Chrome extension ID wherever the unpacked folder lives, so the Windows
+// updater (native messaging host) can whitelist it.
+const KEY =
+  'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwKsR3GWkePF16oi2M58My+tk5kBcHzh0lAo2NfwxeATyQ8DToDP6CIPnfDq0imVySrNs6wfrCgXrEKSPlyvs/fkf5aRjnN6g9vHQ6Qwnn8y5ZLUezqmpTslwno/Kw+k3dX2P59RmdUOiOp0WKUgrFbVgzZcBhL68mwBrKz6pN+o6hHbNyfEt18x7qjMCPCQ+xbdwCfoJiKBIcK2GVnC1W4mOdeixIkVz3rReakeUfbyL2eS90HcCe0+3Q1Z6MZbi35AV5913If9ORaheDKYUWvGxSHWyvBHw35Kfob02NfcI2DqtUrgwlXitInORLY/U8MKNoHbS+A4ojg2VzB1QfwIDAQAB';
+const extensionId = [...createHash('sha256').update(Buffer.from(KEY, 'base64')).digest('hex').slice(0, 32)]
+  .map((c) => String.fromCharCode(97 + parseInt(c, 16)))
+  .join('');
 
 // 1. Extension pages + background (ES modules, shared chunks).
 await build({
@@ -17,6 +28,7 @@ await build({
   publicDir: join(root, 'public'),
   plugins: [react()],
   logLevel: 'warn',
+  define: { __UPDATE_BASE__: JSON.stringify(updateBase) },
   build: {
     outDir: out,
     emptyOutDir: true,
@@ -111,13 +123,15 @@ const basePerms = [
   'notifications',
   'contextMenus',
   'clipboardWrite',
+  'alarms',
 ];
 const manifests = {
   chrome: {
     ...common,
     minimum_chrome_version: '116',
     background: { service_worker: 'background.js', type: 'module' },
-    permissions: [...basePerms, 'offscreen', 'sidePanel'],
+    key: KEY,
+    permissions: [...basePerms, 'offscreen', 'sidePanel', 'nativeMessaging'],
     side_panel: { default_path: 'ui/sidebar.html' },
   },
   firefox: {
@@ -143,4 +157,5 @@ for (const [target, manifest] of Object.entries(manifests)) {
   const zip = Object.fromEntries(files(dir).map((f) => [relative(dir, f).replaceAll('\\', '/'), readFileSync(f)]));
   writeFileSync(join(root, 'dist', `reelfetch-${target}-${pkg.version}.zip`), zipSync(zip, { level: 9 }));
 }
-console.log(`Built dist/chrome, dist/firefox and zips (v${pkg.version}).`);
+writeFileSync(join(root, 'dist', 'build.json'), JSON.stringify({ version: pkg.version, extensionId, updateBase }, null, 2));
+console.log(`Built dist/chrome, dist/firefox and zips (v${pkg.version}, id ${extensionId}, updates ${updateBase || 'off'}).`);

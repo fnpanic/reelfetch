@@ -1,5 +1,6 @@
 /** Injected on demand: pulls captured MSE buffers from the page world, remuxes and saves them. */
 import { remux } from '../engine/mux';
+import { mimeForExt } from '../shared/detect';
 
 interface SaveRequest {
   type: 'mse-save';
@@ -61,7 +62,7 @@ async function save(msg: SaveRequest) {
   try {
     const r = await remux(blobs, { audioOnly: msg.audioOnly, preferMkv: msg.preferMkv, overlap: 'drop' });
     const name = `${msg.filename}.${r.ext}`;
-    saveBlob(new Blob([r.buffer!]), name);
+    saveBlob(new Blob([r.buffer!], { type: mimeForExt(r.ext) }), name);
     return { ok: true, filename: name, size: r.buffer!.byteLength };
   } catch (e) {
     // Fall back to the raw buffers: each is a valid fragmented file on its own.

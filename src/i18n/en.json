@@ -151,5 +151,17 @@
   "private_browsing_title": "Private browsing",
   "private_browsing_warning": "ReelFetch is not enabled in private windows. Turn on that option in the extension settings.",
   "private_browsing_button": "Change private browsing setting",
-  "private_browsing_notifications": "Show notifications for private downloads"
+  "private_browsing_notifications": "Show notifications for private downloads",
+  "err_stalled": "Stopped: no progress for too long. Try again or use Turbo capture.",
+  "err_tab_closed": "The tab was closed before the capture finished.",
+  "update_available": "New version available:",
+  "update_now": "Update now",
+  "update_installing": "Installing update…",
+  "update_check": "Check for updates",
+  "update_checking": "Checking…",
+  "update_uptodate": "ReelFetch is up to date",
+  "update_auto": "Install updates automatically",
+  "update_busy": "Finish or cancel the running downloads first.",
+  "updates_title": "Updates",
+  "update_manual_hint": "Download the new setup and run it to update."
 }

@@ -151,5 +151,17 @@
   "private_browsing_title": "Súkromné prehliadanie",
   "private_browsing_warning": "ReelFetch nie je povolený v súkromných oknách. Zapnite túto možnosť v nastaveniach rozšírenia.",
   "private_browsing_button": "Zmeniť nastavenie súkromného prehliadania",
-  "private_browsing_notifications": "Zobrazovať oznámenia o súkromných sťahovaniach"
+  "private_browsing_notifications": "Zobrazovať oznámenia o súkromných sťahovaniach",
+  "err_stalled": "Zastavené: príliš dlho bez pokroku. Skúste to znova alebo použite turbo záznam.",
+  "err_tab_closed": "Karta bola zatvorená skôr, ako sa záznam dokončil.",
+  "update_available": "K dispozícii je nová verzia:",
+  "update_now": "Aktualizovať teraz",
+  "update_installing": "Inštaluje sa aktualizácia…",
+  "update_check": "Skontrolovať aktualizácie",
+  "update_checking": "Kontroluje sa…",
+  "update_uptodate": "ReelFetch je aktuálny",
+  "update_auto": "Inštalovať aktualizácie automaticky",
+  "update_busy": "Najprv dokončite alebo zrušte prebiehajúce sťahovania.",
+  "updates_title": "Aktualizácie",
+  "update_manual_hint": "Stiahnite nový inštalátor a spustite ho na aktualizáciu."
 }

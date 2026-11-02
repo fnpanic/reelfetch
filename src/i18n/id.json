@@ -151,5 +151,17 @@
   "private_browsing_title": "Penjelajahan pribadi",
   "private_browsing_warning": "ReelFetch tidak diaktifkan di jendela pribadi. Aktifkan opsi tersebut di pengaturan ekstensi.",
   "private_browsing_button": "Ubah pengaturan penjelajahan pribadi",
-  "private_browsing_notifications": "Tampilkan notifikasi untuk unduhan pribadi"
+  "private_browsing_notifications": "Tampilkan notifikasi untuk unduhan pribadi",
+  "err_stalled": "Dihentikan: terlalu lama tanpa kemajuan. Coba lagi atau gunakan tangkapan turbo.",
+  "err_tab_closed": "Tab ditutup sebelum tangkapan selesai.",
+  "update_available": "Versi baru tersedia:",
+  "update_now": "Perbarui sekarang",
+  "update_installing": "Memasang pembaruan…",
+  "update_check": "Periksa pembaruan",
+  "update_checking": "Memeriksa…",
+  "update_uptodate": "ReelFetch sudah terbaru",
+  "update_auto": "Pasang pembaruan secara otomatis",
+  "update_busy": "Selesaikan atau batalkan unduhan yang sedang berjalan terlebih dahulu.",
+  "updates_title": "Pembaruan",
+  "update_manual_hint": "Unduh penginstal baru dan jalankan untuk memperbarui."
 }

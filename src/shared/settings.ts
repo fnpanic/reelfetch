@@ -38,6 +38,8 @@ export interface Settings {
   captureSites: string[];
   tosAccepted: boolean;
   historyPromptAnswered: boolean;
+  /** Install self-hosted updates automatically when no download is running (Windows setup only). */
+  autoUpdate: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -71,6 +73,7 @@ export const DEFAULT_SETTINGS: Settings = {
   captureSites: [],
   tosAccepted: false,
   historyPromptAnswered: false,
+  autoUpdate: true,
 };
 
 export async function loadSettings(): Promise<Settings> {
