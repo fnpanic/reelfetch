@@ -22,10 +22,23 @@ const ffprobe = process.argv[3] ?? 'C:/Program Files/DownloadHelper CoApp/ffprob
 const shots = process.env.E2E_SHOTS ?? tmpdir();
 
 const log = [];
+let flakyDown = false; // toggled by the retry test
+const LONG = 'An Extremely Long Video Title That Never Ends ' + 'Unbroken_Word_Without_Any_Spaces_'.repeat(5);
 async function handler(req, res) {
   const url = new URL(req.url, 'http://x');
   log.push({ path: url.pathname, referer: req.headers.referer ?? '' });
   let path = url.pathname;
+  if (path === '/long.html') {
+    res.setHeader('Content-Type', 'text/html');
+    return res.end(`<!doctype html><title>${LONG}</title><video src="/flaky.mp4?${'q'.repeat(300)}" preload="metadata"></video>`);
+  }
+  if (path === '/flaky.mp4') {
+    if (flakyDown) {
+      res.statusCode = 503;
+      return res.end();
+    }
+    path = '/direct.mp4';
+  }
   if (path === '/page.html') {
     res.setHeader('Content-Type', 'text/html');
     return res.end(`<!doctype html><title>E2E Test Clip - TestTube</title>
@@ -241,6 +254,8 @@ try {
       j.status === 'done' && size > 10_000,
       `${j.media.kind}${j.options.audioOnly ? ' (audio only)' : ''} -> ${j.filename} ${size}B ${probe} ${j.error ?? ''}`,
     );
+    // Chrome renames untyped blob downloads to .txt (text/plain sniffing).
+    check(!d || (!/text\/plain/.test(d.mime) && /^(video|audio)\//.test(d.mime)), `${j.media.kind} saved as media type ${d?.mime}`);
     if (j.options.audioOnly) check(!/h264|vp9/.test(probe) && /aac/.test(probe), 'audio-only has no video stream');
     else if (j.media.kind !== 'direct') check(/h264/.test(probe) && /aac/.test(probe), `${j.media.kind} output has audio + video`);
   }
@@ -250,6 +265,95 @@ try {
   check(protectedHits.length > 5 && protectedHits.every((l) => l.referer.includes('/page.html')), `Referer replayed on ${protectedHits.length} protected requests`);
   const hist = (await api((id) => chrome.runtime.sendMessage({ type: 'get-state', tabId: id }), tabId)).history;
   check(hist.length === jobs.length, `history recorded ${hist.length} entries`);
+
+  // Long titles/URLs must never produce scrollbars (except the vertical content scroller).
+  const longPage = await ctx.newPage();
+  await longPage.goto(`${base}/long.html`);
+  const longTab = await api((u) => chrome.tabs.query({ url: u }).then((t) => t[0].id), `${base}/long.html`);
+  let flaky;
+  for (let i = 0; i < 40 && !flaky; i++) {
+    await sleep(250);
+    flaky = (await api((id) => chrome.runtime.sendMessage({ type: 'get-state', tabId: id }), longTab)).media.find((m) => m.url.includes('/flaky.mp4'));
+  }
+  check(!!flaky, 'long-title media detected');
+  const overflow = () =>
+    ui.evaluate(() => {
+      const W = document.documentElement.clientWidth;
+      const main = document.querySelector('main');
+      const wide = [...document.querySelectorAll('body *')].filter((e) => e.getBoundingClientRect().right > W + 0.5);
+      return [document.scrollingElement.scrollWidth > W, main && main.scrollWidth > main.clientWidth, wide.length].filter(Boolean).length
+        ? `${document.scrollingElement.scrollWidth}/${W} ${wide.slice(0, 3).map((e) => e.className).join(',')}`
+        : '';
+    });
+  // Retry test: the file fails once (server down), then the UI retry must succeed.
+  flakyDown = true;
+  await api((id) => chrome.runtime.sendMessage({ type: 'download', mediaId: id }), flaky.id);
+  let fj;
+  for (let i = 0; i < 40; i++) {
+    await sleep(250);
+    fj = (await api((id) => chrome.runtime.sendMessage({ type: 'get-state', tabId: id }), longTab)).jobs.find((j) => j.media.id === flaky.id);
+    if (fj?.status === 'error') break;
+  }
+  check(fj?.status === 'error', `failing download reported as error (${fj?.error})`);
+  for (const [size, w] of [['small', 380], ['medium', 460], ['big', 600]]) {
+    await api(async (s) => {
+      const { settings } = await chrome.storage.local.get('settings');
+      await chrome.storage.local.set({ settings: { ...settings, popupSize: s, subdirectory: 'Sub_'.repeat(30) } });
+    }, size);
+    await ui.setViewportSize({ width: w, height: 600 });
+    await ui.goto(`chrome-extension://${extId}/ui/popup.html?tabId=${longTab}`);
+    await ui.waitForSelector('.row');
+    const bad = [];
+    const probe = async (name) => {
+      const o = await overflow();
+      if (o) bad.push(`${name}: ${o}`);
+    };
+    await probe('media');
+    await ui.click('.row .more');
+    await probe('menu');
+    await ui.click('.menu button:last-child');
+    await probe('details');
+    for (const i of [2, 3, 4]) {
+      await ui.click(`button[role=tab]:nth-child(${i})`);
+      await sleep(200);
+      await probe(`tab${i}`);
+    }
+    if (size === 'medium') await ui.screenshot({ path: join(shots, 'reelfetch-long-settings.png') });
+    check(!bad.length, `no horizontal overflow at popup size ${size} ${bad.join(' | ')}`);
+  }
+  await api(async () => {
+    const { settings } = await chrome.storage.local.get('settings');
+    await chrome.storage.local.set({ settings: { ...settings, popupSize: 'medium', subdirectory: '' } });
+  });
+
+  // Retry and remove must work from the UI even after the service worker was stopped.
+  await ui.setViewportSize({ width: 460, height: 600 });
+  await ui.goto(`chrome-extension://${extId}/ui/popup.html?tabId=${longTab}`);
+  await ui.click('button[role=tab]:nth-child(2)');
+  await ui.waitForSelector('.job.error');
+  const cdp = await ctx.newCDPSession(ui);
+  await cdp.send('ServiceWorker.enable');
+  await cdp.send('ServiceWorker.stopAllWorkers');
+  await sleep(1000);
+  flakyDown = false;
+  await ui.click(`.job.error button[title="${await api(() => chrome.i18n.getMessage('retry_download_button_tooltip'))}"]`);
+  await ui.waitForSelector('.job.done', { timeout: 20000 }).catch(() => {});
+  const retried = (await api((id) => chrome.runtime.sendMessage({ type: 'get-state', tabId: id }), longTab)).jobs.find((j) => j.media.id === flaky.id);
+  check(retried?.status === 'done' && (await ui.locator('.job.error').count()) === 0, `retry from the UI works after a worker restart (${retried?.status} ${retried?.error ?? ''})`);
+  const rowsBefore = await ui.locator('.row').count();
+  await cdp.send('ServiceWorker.stopAllWorkers');
+  await sleep(1000);
+  await ui.locator('.row').first().locator('button').last().click();
+  await sleep(800);
+  check((await ui.locator('.row').count()) === rowsBefore - 1, `remove from downloads list (${rowsBefore} -> ${await ui.locator('.row').count()})`);
+  await ui.click('button[role=tab]:nth-child(3)');
+  await ui.waitForSelector('.row');
+  const histBefore = await ui.locator('.row').count();
+  await cdp.send('ServiceWorker.stopAllWorkers');
+  await sleep(1000);
+  await ui.locator('.row').first().locator('button').last().click();
+  await sleep(800);
+  check((await ui.locator('.row').count()) === histBefore - 1, `remove from history (${histBefore} -> ${await ui.locator('.row').count()})`);
 
   // MSE capture.
   const mse = await ctx.newPage();
