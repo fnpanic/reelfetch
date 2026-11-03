@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bilibili, facebook, genericMeta, okru, redditKey, vimeo, vk, youtube, youtubePlayerRequest } from '../src/shared/sites';
+import { bilibili, facebook, genericMeta, okru, postKey, vimeo, vk, youtube, youtubePlayerRequest } from '../src/shared/sites';
 
 const ytBase = {
   playabilityStatus: { status: 'OK' },
@@ -165,10 +165,22 @@ describe('reddit', () => {
       `https://v.redd.it/${id}/HLS_AUDIO_128.m3u8`,
       `https://packaged-media.redd.it/${id}/pb/m2-res_480p.mp4?m=DASHPlaylist.mpd&v=1`,
     ])
-      expect(redditKey(u)).toBe(id);
-    expect(redditKey('https://i.redd.it/zz9.gif')).toBe('zz9');
-    expect(redditKey('https://example.com/r8xq2k1abcd91/HLSPlaylist.m3u8')).toBeUndefined();
-    expect(redditKey('https://evilredd.it/x')).toBeUndefined();
-    expect(redditKey('not a url')).toBeUndefined();
+      expect(postKey(u)).toBe(id);
+    expect(postKey('https://i.redd.it/zz9.gif')).toBe('zz9');
+    expect(postKey('https://example.com/r8xq2k1abcd91/HLSPlaylist.m3u8')).toBeUndefined();
+    expect(postKey('https://evilredd.it/x')).toBeUndefined();
+    expect(postKey('not a url')).toBeUndefined();
+  });
+
+  it('matches a RedGifs embed to the media it loads', () => {
+    for (const u of [
+      'https://www.redgifs.com/watch/brilliantnegligiblesockeyesalmon',
+      'https://www.redgifs.com/ifr/brilliantnegligiblesockeyesalmon',
+      'https://api.redgifs.com/v2/gifs/brilliantnegligiblesockeyesalmon/sd.m3u8',
+      'https://media.redgifs.com/BrilliantNegligibleSockeyesalmon-silent.mp4',
+      'https://media.redgifs.com/BrilliantNegligibleSockeyesalmon.mp4',
+    ])
+      expect(postKey(u)).toBe('redgifs:brilliantnegligiblesockeyesalmon');
+    expect(postKey('https://www.redgifs.com/')).toBeUndefined();
   });
 });

@@ -12,7 +12,7 @@ import type { HistoryEntry, Job, MediaItem, RequestHeaders, Variant } from '../s
 import { formatDuration, hostMatches, hostOf, uid } from '../shared/util';
 import { engine, hasOffscreen, onEngineEvent, usesOffscreen } from './engine-client';
 import { clearHeaderRule, pruneHeaderRules, ruleId, setHeaderRule, setYoutubeUaRule } from './rules';
-import { redditKey, vimeo, youtube, youtubePlayerRequest, YT_IOS, type SiteMedia } from '../shared/sites';
+import { postKey, vimeo, youtube, youtubePlayerRequest, YT_IOS, type SiteMedia } from '../shared/sites';
 import { applyUpdate, checkForUpdate, scheduleUpdates, updateState } from './update';
 
 // ------------------------------------------------------------------ state
@@ -22,7 +22,7 @@ const tabInfo = new Map<number, { thumbnail?: string; drm?: boolean; names?: Map
 
 /** Name a feed item after its own post (Reddit), not the page. */
 function applyPostName(item: MediaItem) {
-  const key = item.site ? undefined : redditKey(item.url);
+  const key = postKey(item.url);
   const n = key && tabInfo.get(item.tabId)?.names?.get(key);
   if (!n) return;
   item.title = n.title;
@@ -157,6 +157,7 @@ async function addMedia(
     // Only take defined values, so a re-detection from <video> doesn't erase the size/mime seen on the network.
     const defined = Object.fromEntries(Object.entries(extra).filter(([, v]) => v !== undefined));
     Object.assign(existing, { ...defined, id: existing.id, headers: { ...extra.headers, ...existing.headers } });
+    applyPostName(existing);
     // First seen in the DOM, now requested by the page itself: safe to analyze.
     if (autoAnalyze && existing.analyzed === undefined && (kind === 'hls' || kind === 'dash')) void analyzeItem(existing);
     changed(tabId);

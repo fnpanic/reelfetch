@@ -40,8 +40,10 @@ async function handler(req, res) {
     return res.end(`<!doctype html><title>r/e2etest</title>
 <shreddit-post post-title="First Post About Cats" content-href="${v}/aaaa1111/"><shreddit-player-2 src="${v}/aaaa1111/HLSPlaylist.m3u8?a=1&amp;v=1&amp;f=sd" poster="${v}/thumb.png"></shreddit-player-2></shreddit-post>
 <div class="thing" data-url="${v}/bbbb2222"><a class="title" href="#">Second  Post: Dogs &amp; Friends</a><div data-hls-url="${v}/bbbb2222/HLSPlaylist.m3u8"></div></div>
-<script>setTimeout(() => fetch('${v}/bbbb2222/DASH_480.mp4?source=fallback'), 1500);</script>`);
+<shreddit-post post-title="Third Post Hosted On RedGifs" content-href="https://www.redgifs.com/watch/cheerfulbravecat"><shreddit-embed html="&lt;iframe src=&quot;https://www.redgifs.com/ifr/cheerfulbravecat&quot;&gt;&lt;/iframe&gt;"></shreddit-embed></shreddit-post>
+<script>setTimeout(() => { fetch('${v}/bbbb2222/DASH_480.mp4?source=fallback'); fetch('${v.replace('v.redd.it', 'media.redgifs.com')}/CheerfulBraveCat-silent.mp4'); }, 1500);</script>`);
   }
+  if (host === 'media.redgifs.com' && path === '/CheerfulBraveCat-silent.mp4') path = '/direct.mp4';
   if (host === 'v.redd.it' && /^\/\w+\/DASH_\d+\.mp4$/.test(path)) path = '/direct.mp4';
   if (path === '/flaky.mp4') {
     if (flakyDown) {
@@ -190,7 +192,7 @@ const ctx = await chromium.launchPersistentContext(await mkdtemp(join(tmpdir(), 
   executablePath: chromePath,
   headless: true,
   acceptDownloads: true,
-  args: [`--disable-extensions-except=${ext}`, `--load-extension=${ext}`, '--host-resolver-rules=MAP www.youtube.com 127.0.0.1, MAP www.reddit.com 127.0.0.1, MAP v.redd.it 127.0.0.1', '--ignore-certificate-errors'],
+  args: [`--disable-extensions-except=${ext}`, `--load-extension=${ext}`, '--host-resolver-rules=MAP www.youtube.com 127.0.0.1, MAP www.reddit.com 127.0.0.1, MAP v.redd.it 127.0.0.1, MAP media.redgifs.com 127.0.0.1', '--ignore-certificate-errors'],
 });
 
 try {
@@ -444,11 +446,14 @@ try {
     await rp.goto(rUrl);
     const rTab = await api((u) => chrome.tabs.query({ url: u }).then((t) => t[0]?.id), rUrl);
     let rItem;
-    for (let i = 0; i < 40 && !rItem?.title; i++) {
+    let gItem;
+    for (let i = 0; i < 40 && !(rItem?.title && gItem?.title); i++) {
       await sleep(250);
       const s = await api((id) => chrome.runtime.sendMessage({ type: 'get-state', tabId: id }), rTab);
       rItem = s.media.find((m) => m.url.includes('/bbbb2222/'));
+      gItem = s.media.find((m) => m.url.includes('CheerfulBraveCat'));
     }
+    check(gItem?.title === 'Third Post Hosted On RedGifs', `RedGifs embed in a Reddit feed named after its post "${gItem?.title}"`);
     let rj;
     if (rItem) {
       await api((id) => chrome.runtime.sendMessage({ type: 'download', mediaId: id }), rItem.id);

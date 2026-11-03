@@ -280,15 +280,20 @@ export function facebook(source: string, title?: string): SiteMedia[] {
 // ------------------------------------------------------------------ Reddit
 
 /**
- * Id shared by a Reddit post's player, manifest and stream URLs (v.redd.it/<id>/HLSPlaylist.m3u8,
- * v.redd.it/<id>/DASH_720.mp4, packaged-media.redd.it/<id>/..., i.redd.it/<id>.gif). Used to name each
- * download after its post instead of the feed page.
+ * Id shared by a feed post's embed/player URLs and the media URLs they load, used to name each download after
+ * its post instead of the feed page. Reddit-hosted: v.redd.it/<id>/HLSPlaylist.m3u8, packaged-media.redd.it/<id>/...,
+ * i.redd.it/<id>.gif. RedGifs embeds: redgifs.com/watch|ifr/<slug>, api.redgifs.com/v2/gifs/<slug>/sd.m3u8,
+ * media.redgifs.com/<Slug>-silent.mp4 (slug case differs, so it is lower-cased).
  */
-export function redditKey(url: string): string | undefined {
+export function postKey(url: string): string | undefined {
   try {
     const u = new URL(url);
-    if (!/(^|\.)redd\.it$/.test(u.hostname)) return;
-    return u.pathname.split('/').find(Boolean)?.replace(/\.\w+$/, '') || undefined;
+    const seg = u.pathname.split('/').filter(Boolean);
+    if (/(^|\.)redd\.it$/.test(u.hostname)) return seg[0]?.replace(/\.\w+$/, '') || undefined;
+    if (!/(^|\.)redgifs\.com$/.test(u.hostname)) return;
+    const i = seg.findIndex((x) => /^(watch|ifr|gifs)$/.test(x));
+    const slug = u.hostname === 'media.redgifs.com' ? seg[0]?.replace(/(-\w+)?\.\w+$/, '') : i >= 0 ? seg[i + 1] : undefined;
+    return slug ? `redgifs:${slug.toLowerCase()}` : undefined;
   } catch {
     return;
   }
