@@ -39,9 +39,12 @@ export type UiRequest =
   | { type: 'update-check' }
   | { type: 'update-apply' };
 
+/** A post on a feed page: its media key (see redditKey), title and preview image. */
+export type PostName = { key: string; title: string; thumbnail?: string };
+
 /** Content script -> background. */
 export type ContentMessage =
-  | { type: 'page-media'; urls: string[]; title: string; thumbnail?: string }
+  | { type: 'page-media'; urls: string[]; title: string; thumbnail?: string; names?: PostName[] }
   | { type: 'mse-update'; msId: string; bytes: number; mimes: string[] }
   | { type: 'drm-detected' }
   | { type: 'site-media'; items: unknown[] }

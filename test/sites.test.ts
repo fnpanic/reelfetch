@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bilibili, facebook, genericMeta, okru, vimeo, vk, youtube, youtubePlayerRequest } from '../src/shared/sites';
+import { bilibili, facebook, genericMeta, okru, redditKey, vimeo, vk, youtube, youtubePlayerRequest } from '../src/shared/sites';
 
 const ytBase = {
   playabilityStatus: { status: 'OK' },
@@ -152,5 +152,23 @@ describe('other sites', () => {
     // YouTube-style og:video pointing at an HTML embed page is not media.
     expect(genericMeta([], { 'og:video:url': 'https://www.youtube.com/embed/abc', 'og:video:type': 'text/html' })).toEqual([]);
     expect(genericMeta([], { 'og:video': 'https://cdn/stream', 'og:video:type': 'video/mp4' })).toHaveLength(1);
+  });
+});
+
+describe('reddit', () => {
+  it('gives a post\'s player, manifest and stream URLs the same key', () => {
+    const id = 'r8xq2k1abcd91';
+    for (const u of [
+      `https://v.redd.it/${id}`,
+      `https://v.redd.it/${id}/HLSPlaylist.m3u8?a=1700000000%2CABC&v=1&f=sd`,
+      `https://v.redd.it/${id}/DASH_720.mp4?source=fallback`,
+      `https://v.redd.it/${id}/HLS_AUDIO_128.m3u8`,
+      `https://packaged-media.redd.it/${id}/pb/m2-res_480p.mp4?m=DASHPlaylist.mpd&v=1`,
+    ])
+      expect(redditKey(u)).toBe(id);
+    expect(redditKey('https://i.redd.it/zz9.gif')).toBe('zz9');
+    expect(redditKey('https://example.com/r8xq2k1abcd91/HLSPlaylist.m3u8')).toBeUndefined();
+    expect(redditKey('https://evilredd.it/x')).toBeUndefined();
+    expect(redditKey('not a url')).toBeUndefined();
   });
 });

@@ -123,6 +123,7 @@ analysis with REA).
 | Default action (download / download as / audio / copy URL), "always copy URL" | ✅ | ✅ |
 | Media preview: image or short video preview | ✅ | ✅ (engine builds a 6 s clip of HLS/DASH streams) |
 | Smart naming: pick the title element on the page | ✅ (smart-naming page) | ✅ (on-page element picker) |
+| Feed pages (Reddit): each video named after its own post, not the page | - | ✅ (new and old Reddit, `v.redd.it` / `packaged-media.redd.it`) |
 | Language preference lists (add / move / remove), prefer original audio | ✅ | ✅ |
 | Private browsing: warning when disabled, notifications for private downloads | ✅ | ✅ |
 | "Change browser download directory" shortcut | ✅ | ✅ |

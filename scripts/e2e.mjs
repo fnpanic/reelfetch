@@ -32,6 +32,17 @@ async function handler(req, res) {
     res.setHeader('Content-Type', 'text/html');
     return res.end(`<!doctype html><title>${LONG}</title><video src="/flaky.mp4?${'q'.repeat(300)}" preload="metadata"></video>`);
   }
+  const host = (req.headers.host ?? '').split(':')[0];
+  if (host === 'www.reddit.com' && path === '/r/e2etest/') {
+    // Subreddit feed: page title is the subreddit; each post has its own title and v.redd.it video.
+    const v = `https://v.redd.it:${req.headers.host.split(':')[1]}`;
+    res.setHeader('Content-Type', 'text/html');
+    return res.end(`<!doctype html><title>r/e2etest</title>
+<shreddit-post post-title="First Post About Cats" content-href="${v}/aaaa1111/"><shreddit-player-2 src="${v}/aaaa1111/HLSPlaylist.m3u8?a=1&amp;v=1&amp;f=sd" poster="${v}/thumb.png"></shreddit-player-2></shreddit-post>
+<div class="thing" data-url="${v}/bbbb2222"><a class="title" href="#">Second  Post: Dogs &amp; Friends</a><div data-hls-url="${v}/bbbb2222/HLSPlaylist.m3u8"></div></div>
+<script>setTimeout(() => fetch('${v}/bbbb2222/DASH_480.mp4?source=fallback'), 1500);</script>`);
+  }
+  if (host === 'v.redd.it' && /^\/\w+\/DASH_\d+\.mp4$/.test(path)) path = '/direct.mp4';
   if (path === '/flaky.mp4') {
     if (flakyDown) {
       res.statusCode = 503;
@@ -179,7 +190,7 @@ const ctx = await chromium.launchPersistentContext(await mkdtemp(join(tmpdir(), 
   executablePath: chromePath,
   headless: true,
   acceptDownloads: true,
-  args: [`--disable-extensions-except=${ext}`, `--load-extension=${ext}`, '--host-resolver-rules=MAP www.youtube.com 127.0.0.1', '--ignore-certificate-errors'],
+  args: [`--disable-extensions-except=${ext}`, `--load-extension=${ext}`, '--host-resolver-rules=MAP www.youtube.com 127.0.0.1, MAP www.reddit.com 127.0.0.1, MAP v.redd.it 127.0.0.1', '--ignore-certificate-errors'],
 });
 
 try {
@@ -425,6 +436,35 @@ try {
   const sel = rules.find((r) => r.host === '127.0.0.1')?.selector;
   const picked = sel && (await page.evaluate((x) => document.querySelectorAll(x).length === 1 && document.querySelector(x).textContent, sel));
   check(picked === 'Smart Name From Page', `element picker saved rule "${sel}"`);
+
+  // Reddit feed: each video is named after its own post, not the subreddit page.
+  if (httpsPort) {
+    const rUrl = `https://www.reddit.com:${httpsPort}/r/e2etest/`;
+    const rp = await ctx.newPage();
+    await rp.goto(rUrl);
+    const rTab = await api((u) => chrome.tabs.query({ url: u }).then((t) => t[0]?.id), rUrl);
+    let rItem;
+    for (let i = 0; i < 40 && !rItem?.title; i++) {
+      await sleep(250);
+      const s = await api((id) => chrome.runtime.sendMessage({ type: 'get-state', tabId: id }), rTab);
+      rItem = s.media.find((m) => m.url.includes('/bbbb2222/'));
+    }
+    let rj;
+    if (rItem) {
+      await api((id) => chrome.runtime.sendMessage({ type: 'download', mediaId: id }), rItem.id);
+      for (let i = 0; i < 40; i++) {
+        await sleep(250);
+        const s = await api((id) => chrome.runtime.sendMessage({ type: 'get-state', tabId: id }), rTab);
+        rj = s.jobs.find((j) => j.media.id === rItem.id);
+        if (rj && rj.status !== 'running' && rj.status !== 'queued') break;
+      }
+    }
+    check(
+      rItem?.title === 'Second Post: Dogs & Friends' && rj?.status === 'done' && rj.basename.startsWith('Second Post'),
+      `Reddit feed: video named after its post "${rItem?.title}" -> ${rj?.basename} (${rj?.status})`,
+    );
+    await rp.close();
+  }
 
   // Site extractor (YouTube player data) -> merged video + audio download.
   const ytUrl = `https://www.youtube.com:${httpsPort}/watch?v=abc123`;

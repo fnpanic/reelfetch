@@ -1,5 +1,6 @@
 /** Isolated-world content script: reports <video>/<audio> sources, page thumbnail, and relays MSE capture events. */
-import { genericMeta } from '../shared/sites';
+import type { PostName } from '../shared/messages';
+import { genericMeta, redditKey } from '../shared/sites';
 
 const send = (msg: unknown) => {
   try {
@@ -31,11 +32,34 @@ function scan() {
   } catch {
     /* ignore */
   }
-  const msg = { type: 'page-media', urls: [...urls], title: document.title, thumbnail };
+  const names = postNames();
+  const msg = { type: 'page-media', urls: [...urls], title: document.title, thumbnail, names };
   const key = JSON.stringify(msg);
-  if (key === last || (!msg.urls.length && !msg.thumbnail)) return;
+  if (key === last || (!msg.urls.length && !msg.thumbnail && !names.length)) return;
   last = key;
   send(msg);
+}
+
+/**
+ * Reddit feeds play many posts' videos on one page: map each post's media id to its title, so a download is
+ * named after its post, not the subreddit. New Reddit: <shreddit-post post-title>; old Reddit: .thing[data-url].
+ */
+function postNames(): PostName[] {
+  const out = new Map<string, PostName>();
+  document.querySelectorAll('shreddit-post[post-title], .thing[data-url]').forEach((p) => {
+    const title = (p.getAttribute('post-title') ?? p.querySelector('a.title')?.textContent ?? '').replace(/\s+/g, ' ').trim();
+    if (!title) return;
+    const poster = p.querySelector('[poster]')?.getAttribute('poster') ?? undefined;
+    // Media URLs sit in attributes (content-href, src, data-hls-url, packaged-media-json, ...).
+    for (const el of [p, ...p.querySelectorAll('*')])
+      for (const a of el.attributes)
+        for (const [u] of a.value.matchAll(/https?:\/\/[\w.-]*redd\.it(?::\d+)?\/[^\s"'<>\\]+/g)) {
+          const key = redditKey(u);
+          if (key && !out.has(key))
+            out.set(key, { key, title: title.slice(0, 300), thumbnail: poster && /^https?:/.test(poster) ? poster : undefined });
+        }
+  });
+  return [...out.values()].slice(0, 300);
 }
 
 let timer: ReturnType<typeof setTimeout> | undefined;

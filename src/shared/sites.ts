@@ -277,6 +277,23 @@ export function facebook(source: string, title?: string): SiteMedia[] {
   return out;
 }
 
+// ------------------------------------------------------------------ Reddit
+
+/**
+ * Id shared by a Reddit post's player, manifest and stream URLs (v.redd.it/<id>/HLSPlaylist.m3u8,
+ * v.redd.it/<id>/DASH_720.mp4, packaged-media.redd.it/<id>/..., i.redd.it/<id>.gif). Used to name each
+ * download after its post instead of the feed page.
+ */
+export function redditKey(url: string): string | undefined {
+  try {
+    const u = new URL(url);
+    if (!/(^|\.)redd\.it$/.test(u.hostname)) return;
+    return u.pathname.split('/').find(Boolean)?.replace(/\.\w+$/, '') || undefined;
+  } catch {
+    return;
+  }
+}
+
 // ------------------------------------------------------------------ generic page metadata (any site)
 
 const MEDIA_URL = /\.(m3u8|mpd|mp4|m4v|webm|mov|mkv|flv|f4v|ogv|3gp|avi|wmv|mpe?g|mp3|m4a|aac|ogg|oga|opus|wav|flac)(\?|$)/i;

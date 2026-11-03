@@ -4,7 +4,7 @@
  */
 import { classify, extFor, mediaKey } from '../shared/detect';
 import { t } from '../shared/i18n';
-import type { ContentMessage, EngineEvent, UiRequest } from '../shared/messages';
+import type { ContentMessage, EngineEvent, PostName, UiRequest } from '../shared/messages';
 import { buildBasename, cleanTitle } from '../shared/naming';
 import { visibleMedia } from '../shared/quality';
 import { loadSettings, type Settings } from '../shared/settings';
@@ -12,13 +12,22 @@ import type { HistoryEntry, Job, MediaItem, RequestHeaders, Variant } from '../s
 import { formatDuration, hostMatches, hostOf, uid } from '../shared/util';
 import { engine, hasOffscreen, onEngineEvent, usesOffscreen } from './engine-client';
 import { clearHeaderRule, pruneHeaderRules, ruleId, setHeaderRule, setYoutubeUaRule } from './rules';
-import { vimeo, youtube, youtubePlayerRequest, YT_IOS, type SiteMedia } from '../shared/sites';
+import { redditKey, vimeo, youtube, youtubePlayerRequest, YT_IOS, type SiteMedia } from '../shared/sites';
 import { applyUpdate, checkForUpdate, scheduleUpdates, updateState } from './update';
 
 // ------------------------------------------------------------------ state
 
 const media = new Map<number, MediaItem[]>();
-const tabInfo = new Map<number, { thumbnail?: string; drm?: boolean }>();
+const tabInfo = new Map<number, { thumbnail?: string; drm?: boolean; names?: Map<string, PostName> }>();
+
+/** Name a feed item after its own post (Reddit), not the page. */
+function applyPostName(item: MediaItem) {
+  const key = item.site ? undefined : redditKey(item.url);
+  const n = key && tabInfo.get(item.tabId)?.names?.get(key);
+  if (!n) return;
+  item.title = n.title;
+  if (n.thumbnail) item.thumbnail = n.thumbnail;
+}
 let jobs: Job[] = [];
 let settings: Settings;
 const isFirefox = !chrome.offscreen;
@@ -178,6 +187,7 @@ async function addMedia(
     ...extra,
   };
   item.headers.referer ??= tab.url;
+  applyPostName(item);
   media.set(tabId, [...(media.get(tabId) ?? []), item]);
   changed(tabId);
   if (autoAnalyze && (kind === 'hls' || kind === 'dash')) void analyzeItem(item);
@@ -791,6 +801,18 @@ async function onContent(msg: ContentMessage, tabId: number, frameId: number) {
     if (msg.thumbnail && frameId === 0) {
       info.thumbnail = msg.thumbnail;
       for (const m of media.get(tabId) ?? []) m.thumbnail ??= msg.thumbnail;
+    }
+    if (Array.isArray(msg.names) && frameId === 0) {
+      const names = new Map<string, PostName>();
+      for (const n of msg.names.slice(0, 300))
+        if (n && typeof n.key === 'string' && typeof n.title === 'string' && n.title)
+          names.set(n.key.slice(0, 100), {
+            key: n.key.slice(0, 100),
+            title: n.title.slice(0, 300),
+            thumbnail: typeof n.thumbnail === 'string' && /^https?:\/\//.test(n.thumbnail) ? n.thumbnail.slice(0, 2000) : undefined,
+          });
+      info.names = names;
+      for (const m of media.get(tabId) ?? []) applyPostName(m);
     }
     for (const url of msg.urls) {
       const det = classify({ url }) ?? (/^https?:/.test(url) ? { kind: 'direct' as const } : null);
