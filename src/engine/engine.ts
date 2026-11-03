@@ -6,7 +6,7 @@ import type { Job, MediaItem, Progress, Variant } from '../shared/types';
 import type { Settings } from '../shared/settings';
 import { sleep } from '../shared/util';
 import { decryptSegment, fetchBytes, fetchText } from './net';
-import { totalFromRange } from '../shared/detect';
+import { extFor, totalFromRange } from '../shared/detect';
 import { createSpool, sniffExt, type Spool } from './spool';
 import { remux } from './mux';
 import { convertToMp3 } from './mp3';
@@ -444,6 +444,7 @@ export async function download(job: Job, s: EngineSettings, ctl: Control): Promi
 
   try {
     let tracks: Track[];
+    let asIs: string | undefined; // extension of a single plain file that is saved unchanged
     if (job.media.kind === 'hls') tracks = await planHls(job, s, ctl.signal);
     else if (job.media.kind === 'dash') tracks = await planDash(job, s, ctl.signal);
     else {
@@ -454,6 +455,7 @@ export async function download(job: Job, s: EngineSettings, ctl: Control): Promi
         job.options.audioOnly && v?.audioRef
           ? [{ name: 'audio', url: v.audioRef }]
           : [{ name: 'video', url: videoUrl }, ...(v?.audioRef ? [{ name: 'audio' as const, url: v.audioRef }] : [])];
+      if (!v?.audioRef && !job.options.audioOnly) asIs = extFor(videoUrl, v?.mime ?? job.media.mime);
     }
 
     if (ctl.previewSeconds) tracks = await truncateForPreview(tracks, ctl.previewSeconds, ctl.signal);
@@ -489,6 +491,15 @@ export async function download(job: Job, s: EngineSettings, ctl: Control): Promi
         else await downloadSegments(t.segments!, sp, ctl, c, report, { mapKey: '' }, isVideo);
       }),
     );
+
+    if (asIs) {
+      // Plain file: byte-identical to the server's file, any format (no remux).
+      const blob = await raw.get(tracks[0])!.file();
+      if (!blob.size) throw new Error('Downloaded no data');
+      phase = 'save';
+      report(true);
+      return { files: [{ blob, ext: asIs }], size: blob.size, spools };
+    }
 
     phase = 'mux';
     report(true);

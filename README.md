@@ -104,6 +104,7 @@ analysis with REA).
 | DRM detection and refusal | ✅ | ✅ (HLS key formats, DASH `ContentProtection`, EME in the page) |
 | Preferred audio and subtitle languages, subtitle download | ✅ | ✅ (WebVTT sidecar file) |
 | Download queue, max concurrent downloads, stop/retry, open file / show folder | ✅ | ✅ |
+| Works next to download-manager extensions (AB Download Manager, IDM, ...) | not checked | ✅ files reach the browser as `blob:` URLs, so they keep ReelFetch's name and aren't taken over |
 | Download As… / always ask, download sub-directory | ✅ | ✅ |
 | Smart naming (per-site XPath rules) | ✅ | ✅ (CSS selector or XPath) plus filename templates |
 | Download history with retention, opt-in, clear | ✅ | ✅ (local only, skips private windows) |
@@ -215,6 +216,10 @@ Test fixtures in `test/fixtures` were generated with ffmpeg (see `test/fixtures/
   ✅. Bilibili redirected the headless browser to an error page and OK.ru needs a valid video id, so those two
   extractors are covered by unit tests only; Facebook/Instagram/VK need logins and are unit-tested only. Sites change
   their page data, so an extractor can break - Turbo capture and the generic HLS/DASH detection keep working then.
+- Every file is fetched by ReelFetch itself and handed to the browser's download list when complete.
+  Download-manager integrations such as AB Download Manager take over plain http downloads by canceling them, which
+  showed up as "canceled" jobs with the server's file name; `blob:` downloads are left alone. Because the browser only
+  sees the finished file, its download list shows it once the transfer is done (progress is in ReelFetch).
 - HLS `SAMPLE-AES` and any Widevine/PlayReady/FairPlay content is DRM and is refused by design (as in VDH).
 - Live recordings start at the live edge (like a player), not at the beginning of the DVR window.
 - Audio-only MP3 conversion applies to stream/file downloads; MSE captures are saved in their original codec.

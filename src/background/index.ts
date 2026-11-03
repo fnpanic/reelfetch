@@ -2,7 +2,7 @@
  * Background: detects media from network traffic and page content, keeps the per-tab media list,
  * runs the download queue, history, notifications, context menus and hotkeys.
  */
-import { classify, extFor, mediaKey } from '../shared/detect';
+import { classify, mediaKey } from '../shared/detect';
 import { t } from '../shared/i18n';
 import type { ContentMessage, EngineEvent, PostName, UiRequest } from '../shared/messages';
 import { buildBasename, cleanTitle } from '../shared/naming';
@@ -34,8 +34,9 @@ const isFirefox = !chrome.offscreen;
 /** Jobs handled by the stream engine (everything except plain file downloads and MSE captures). */
 const variantOf = (j: Job) => j.media.variants?.find((v) => v.id === j.options.variantId) ?? j.media.variants?.[0];
 /** Jobs handled by the stream engine: everything except plain single-file downloads and MSE captures. */
-const isEngineJob = (j: Job) =>
-  j.media.kind !== 'mse' && !(j.media.kind === 'direct' && !j.options.audioOnly && !variantOf(j)?.audioRef);
+// Plain files go through the engine too and reach the browser as blob: URLs, so a download manager
+// extension (AB Download Manager, IDM, ...) cannot take them over and drop ReelFetch's file name.
+const isEngineJob = (j: Job) => j.media.kind !== 'mse';
 const isTurbo = (j: Job) => j.media.kind === 'mse' && (!!j.options.turbo || !!j.media.captureOnly);
 
 const ready = (async () => {
@@ -355,23 +356,6 @@ async function startJob(j: Job) {
     .map((u) => new URL(u).hostname);
   await setHeaderRule(`job-${j.id}`, hosts, j.media.headers);
   if (j.status !== 'running') return cleanup(j); // canceled while we were setting up
-  if (!isEngineJob(j)) {
-    const url = v?.ref ?? j.media.url;
-    const ext = extFor(url, v?.mime ?? j.media.mime);
-    const id = await chrome.downloads.download({
-      url,
-      filename: `${j.basename}.${ext}`,
-      saveAs: !!(j.options.saveAs || settings.alwaysSaveAs),
-      conflictAction: 'uniquify',
-    });
-    if (j.status !== 'running') return void chrome.downloads.cancel(id).catch(() => {});
-    j.downloadIds = [id];
-    j.filename = `${j.basename}.${ext}`;
-    j.progress = { bytes: 0, total: v?.size ?? j.media.size, phase: 'download' };
-    watchDirect();
-    changed();
-    return;
-  }
   await engine({ op: 'start', job: j, settings: engineSettings() });
   if (j.status !== 'running') await engine({ op: 'cancel', jobId: j.id }).catch(() => {});
 }
@@ -480,24 +464,6 @@ async function startMse(j: Job, frameOverride?: number, msOverride?: string) {
   if (!res?.ok) throw new Error(res?.error ?? 'Capture failed');
   j.filename = res.filename;
   await finish(j, res.size);
-}
-
-let directTimer: ReturnType<typeof setInterval> | undefined;
-function watchDirect() {
-  if (directTimer) return;
-  directTimer = setInterval(async () => {
-    const active = jobs.filter((j) => j.status === 'running' && !isEngineJob(j) && j.downloadIds?.length);
-    if (!active.length) {
-      clearInterval(directTimer);
-      directTimer = undefined;
-      return;
-    }
-    for (const j of active) {
-      const [d] = await chrome.downloads.search({ id: j.downloadIds![0] });
-      if (d) j.progress = { bytes: d.bytesReceived, total: d.totalBytes > 0 ? d.totalBytes : j.media.size, phase: 'download' };
-    }
-    changed();
-  }, 1000);
 }
 
 async function onEngine(e: EngineEvent): Promise<unknown> {

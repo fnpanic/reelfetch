@@ -10,7 +10,7 @@ import { execFileSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createServer as createHttpsServer } from 'node:https';
-import { readFileSync, mkdtempSync } from 'node:fs';
+import { readFileSync, mkdtempSync, writeFileSync } from 'node:fs';
 
 const root = resolve(import.meta.dirname, '..');
 const ext = join(root, 'dist', 'chrome');
@@ -96,7 +96,7 @@ async function handler(req, res) {
   if (path === '/watch') {
     // Synthetic YouTube watch page (www.youtube.com is mapped to this server): exercises the real
     // page-world extractor + background intake + split video/audio merge.
-    const origin = `http://${req.headers.host}`;
+    const origin = `${req.socket.encrypted ? "https" : "http"}://${req.headers.host}`; // no reliance on HSTS upgrades
     const pr = {
       playabilityStatus: { status: 'OK' },
       videoDetails: { videoId: url.searchParams.get('v') ?? 'abc123', title: 'Never Gonna Give Up Testing', lengthSeconds: '10', thumbnail: { thumbnails: [{ url: `${origin}/thumb.png` }] } },
@@ -188,16 +188,22 @@ const check = (ok, msg) => {
 };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Mock download manager (like AB Download Manager / IDM integrations): takes over every http(s) download by
+// canceling and erasing it. ReelFetch's downloads must not be affected.
+const dm = mkdtempSync(join(tmpdir(), 'rf-dm-'));
+writeFileSync(join(dm, 'manifest.json'), JSON.stringify({ manifest_version: 3, name: 'Mock DM', version: '1', permissions: ['downloads'], background: { service_worker: 'bg.js' } }));
+writeFileSync(join(dm, 'bg.js'), "chrome.downloads.onCreated.addListener(async (d) => { if (/^https?:/.test(d.url)) { await chrome.downloads.cancel(d.id).catch(() => {}); await chrome.downloads.erase({ id: d.id }).catch(() => {}); } });");
 const ctx = await chromium.launchPersistentContext(await mkdtemp(join(tmpdir(), 'rf-e2e-')), {
   executablePath: chromePath,
   headless: true,
   acceptDownloads: true,
-  args: [`--disable-extensions-except=${ext}`, `--load-extension=${ext}`, '--host-resolver-rules=MAP www.youtube.com 127.0.0.1, MAP www.reddit.com 127.0.0.1, MAP v.redd.it 127.0.0.1, MAP media.redgifs.com 127.0.0.1', '--ignore-certificate-errors'],
+  args: [`--disable-extensions-except=${ext},${dm}`, `--load-extension=${ext},${dm}`, '--host-resolver-rules=MAP www.youtube.com 127.0.0.1, MAP www.reddit.com 127.0.0.1, MAP v.redd.it 127.0.0.1, MAP media.redgifs.com 127.0.0.1', '--ignore-certificate-errors'],
 });
 
 try {
-  let [sw] = ctx.serviceWorkers();
-  sw ??= await ctx.waitForEvent('serviceworker');
+  const isRf = (w) => w.url().endsWith('/background.js');
+  let sw = ctx.serviceWorkers().find(isRf);
+  while (!sw) sw = await ctx.waitForEvent('serviceworker').then((w) => (isRf(w) ? w : undefined));
   const extId = sw.url().split('/')[2];
 
   const ui = await ctx.newPage();
@@ -287,6 +293,8 @@ try {
     );
     // Chrome renames untyped blob downloads to .txt (text/plain sniffing).
     check(!d || (!/text\/plain/.test(d.mime) && /^(video|audio)\//.test(d.mime)), `${j.media.kind} saved as media type ${d?.mime}`);
+    if (j.media.kind === 'direct' && !j.options.audioOnly)
+      check(d?.url.startsWith('blob:') && j.status === 'done', `direct file handed over as ${d?.url.slice(0, 5)} URL: a download manager extension could not take it over (${j.status})`);
     if (j.options.audioOnly) check(!/h264|vp9/.test(probe) && /aac/.test(probe), 'audio-only has no video stream');
     else if (j.media.kind !== 'direct') check(/h264/.test(probe) && /aac/.test(probe), `${j.media.kind} output has audio + video`);
   }
