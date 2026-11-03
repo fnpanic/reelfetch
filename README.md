@@ -145,6 +145,12 @@ API). The Chrome Web Store doesn't accept YouTube downloaders; install from the 
 manifest/file or via MSE capture of what the player plays. DRM-protected media (Widevine, PlayReady, FairPlay,
 `SAMPLE-AES`) is the deliberate exception, exactly as in VDH: decrypting it would mean circumventing copy protection.
 
+## Documentation
+
+- [How downloads work](docs/downloads.md) - pipeline from detection to the saved file, troubleshooting table
+  (canceled downloads, HTTP 410, slow downloads, naming).
+- [Changelog](CHANGELOG.md) - what changed in each version.
+
 ## Architecture
 
 ```
