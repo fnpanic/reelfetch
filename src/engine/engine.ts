@@ -5,7 +5,7 @@ import { pickByLang, pickVariant } from '../shared/quality';
 import type { Job, MediaItem, Progress, Variant } from '../shared/types';
 import type { Settings } from '../shared/settings';
 import { sleep } from '../shared/util';
-import { decryptSegment, fetchBytes, fetchText } from './net';
+import { decryptSegment, fetchBytes, fetchText, HttpError } from './net';
 import { extFor, totalFromRange } from '../shared/detect';
 import { createSpool, sniffExt, type Spool } from './spool';
 import { remux } from './mux';
@@ -358,14 +358,51 @@ async function recordLive(t: Track, spool: Spool, ctl: Control, c: Counter, repo
 }
 
 const CHUNK = 8 << 20;
+/** CDNs that throttle whole-file requests and must be fetched in ranges (YouTube). */
+const RANGE_ONLY = /(^|\.)googlevideo\.com$/;
 
 /**
- * Download a whole file. Uses 8 MB range requests when the server supports them (resumable per
- * chunk, and required by throttling CDNs such as googlevideo), else streams the plain response.
+ * Download a whole file. Like the browser: one streaming request, resumed with a Range request only if the
+ * connection drops. Many hosts sign file URLs with an expiry or a request limit (HTTP 410/403 later), and a
+ * request per chunk also pays a round trip each time, so chunking is reserved for RANGE_ONLY CDNs.
  */
 async function downloadDirect(url: string, spool: Spool, ctl: Control, c: Counter, report: () => void) {
+  if (RANGE_ONLY.test(new URL(url).hostname)) return downloadRanges(url, spool, ctl, c, report);
+  let total: number | undefined;
+  for (let attempt = 0; ; attempt++) {
+    const pos = spool.size;
+    try {
+      const res = await fetch(url, { credentials: 'include', signal: ctl.signal, headers: pos ? { Range: `bytes=${pos}-` } : {} });
+      if (!res.ok || !res.body || (pos && res.status !== 206)) throw new HttpError(res.status, url);
+      if (total == null) {
+        const len = Number(res.headers.get('content-length'));
+        total = pos ? totalFromRange(res.headers.get('content-range') ?? undefined) : len > 0 ? len : undefined;
+        if (total != null) c.total = (c.total ?? 0) + total;
+      }
+      const reader = res.body.getReader();
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        await spool.append(value);
+        c.bytes += value.byteLength;
+        report();
+      }
+      if (total == null || spool.size >= total) return;
+      throw new Error('Connection closed early'); // resume below
+    } catch (e) {
+      if (ctl.signal.aborted) throw e;
+      // Resume only what makes sense: dropped connections and transient server errors.
+      if (e instanceof HttpError && !(e.status === 0 || e.status === 408 || e.status === 429 || e.status >= 500)) throw e;
+      if (attempt >= 5) throw e;
+      await sleep(Math.min(8000, 400 * 2 ** attempt));
+    }
+  }
+}
+
+/** Sequential 8 MB range requests (resumable per chunk) for CDNs that throttle plain requests. */
+async function downloadRanges(url: string, spool: Spool, ctl: Control, c: Counter, report: () => void) {
   const res = await fetch(url, { credentials: 'include', signal: ctl.signal, headers: { Range: `bytes=0-${CHUNK - 1}` } });
-  if (!res.ok || !res.body) throw new Error(`HTTP ${res.status} for ${url.slice(0, 120)}`);
+  if (!res.ok || !res.body) throw new HttpError(res.status, url);
   const total = res.status === 206 ? totalFromRange(res.headers.get('content-range') ?? undefined) : undefined;
   if (total != null) c.total = (c.total ?? 0) + total;
   const reader = res.body.getReader();

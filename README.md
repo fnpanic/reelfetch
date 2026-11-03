@@ -220,6 +220,10 @@ Test fixtures in `test/fixtures` were generated with ffmpeg (see `test/fixtures/
   Download-manager integrations such as AB Download Manager take over plain http downloads by canceling them, which
   showed up as "canceled" jobs with the server's file name; `blob:` downloads are left alone. Because the browser only
   sees the finished file, its download list shows it once the transfer is done (progress is in ReelFetch).
+- Plain files are fetched like the browser does: one streaming request, resumed with a `Range` request only if the
+  connection drops. Many hosts sign file links with an expiry or a request limit and answer `410 Gone` to later
+  requests, so per-chunk requests (1.2.3) failed and were slow; only YouTube's CDN, which throttles whole-file
+  requests, is still fetched in 8 MB ranges.
 - HLS `SAMPLE-AES` and any Widevine/PlayReady/FairPlay content is DRM and is refused by design (as in VDH).
 - Live recordings start at the live edge (like a player), not at the beginning of the DVR window.
 - Audio-only MP3 conversion applies to stream/file downloads; MSE captures are saved in their original codec.

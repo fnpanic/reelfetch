@@ -19,6 +19,9 @@ const root = join(__dirname, 'fixtures');
 let server: Server;
 let base = '';
 const hits: string[] = [];
+// Large plain file for the chunked downloader: 30 MB + a ragged tail, deterministic content.
+const BIG = Uint8Array.from({ length: 30 * 2 ** 20 + 12345 }, (_, i) => (i * 31 + (i >> 13)) & 255);
+let bigRequests = 0;
 
 beforeAll(async () => {
   server = createServer(async (req, res) => {
@@ -59,7 +62,20 @@ beforeAll(async () => {
         res.end(mpd);
         return;
       }
-      const body = await readFile(join(root, path));
+      if (path === '/expiring.bin' && hits.filter((h) => h === '/expiring.bin').length > 1) {
+        // Signed URL that may be used once (or has expired by the next request), like many file hosts.
+        res.statusCode = 410;
+        return res.end();
+      }
+      if (path === '/drop.bin' && !req.headers.range) {
+        // Connection drops halfway through: the downloader must resume with a Range request.
+        res.setHeader('Content-Length', BIG.byteLength);
+        res.write(BIG.subarray(0, 10 * 2 ** 20));
+        setTimeout(() => res.destroy(), 50);
+        return;
+      }
+      if (path === '/big.bin') bigRequests++;
+      const body = /^\/(big|expiring|drop)\.bin$/.test(path) ? BIG : await readFile(join(root, path));
       const range = /bytes=(\d+)-(\d*)/.exec(req.headers.range ?? '');
       if (range) {
         // Range support like real CDNs (exercises the chunked downloader).
@@ -219,6 +235,25 @@ describe('engine', () => {
     expect(info.duration).toBeGreaterThan(9.5);
     const audio = await download(job(m, { variantId: 'v', audioOnly: true }), settings, ctl());
     expect((await inspect(audio.files[0].blob)).video).toEqual([]);
+  });
+
+  const same = async (out: Awaited<ReturnType<typeof download>>) => {
+    const got = new Uint8Array(await out.files[0].blob.arrayBuffer());
+    return got.byteLength === BIG.byteLength && Buffer.compare(Buffer.from(got), Buffer.from(BIG)) === 0;
+  };
+
+  it('downloads a large plain file in one request, byte-identical', async () => {
+    bigRequests = 0;
+    expect(await same(await download(job(media('direct', 'big.bin')), settings, ctl()))).toBe(true);
+    expect(bigRequests).toBe(1);
+  });
+
+  it('uses a file URL only once (signed URLs answer 410 afterwards)', async () => {
+    expect(await same(await download(job(media('direct', 'expiring.bin')), settings, ctl()))).toBe(true);
+  });
+
+  it('resumes a dropped connection with a Range request', async () => {
+    expect(await same(await download(job(media('direct', 'drop.bin')), settings, ctl()))).toBe(true);
   });
 
   it('uses inline DASH manifests (Facebook style)', async () => {

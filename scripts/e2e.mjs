@@ -328,7 +328,7 @@ try {
   flakyDown = true;
   await api((id) => chrome.runtime.sendMessage({ type: 'download', mediaId: id }), flaky.id);
   let fj;
-  for (let i = 0; i < 40; i++) {
+  for (let i = 0; i < 120; i++) { // 5xx is retried with backoff (~12 s) before it fails
     await sleep(250);
     fj = (await api((id) => chrome.runtime.sendMessage({ type: 'get-state', tabId: id }), longTab)).jobs.find((j) => j.media.id === flaky.id);
     if (fj?.status === 'error') break;

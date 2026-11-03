@@ -1,6 +1,6 @@
 {
   "name": "reelfetch",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "private": true,
   "description": "ReelFetch - detect and download video/audio streams (HLS, DASH, direct media, MSE capture) from web pages.",
   "type": "module",
