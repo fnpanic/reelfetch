@@ -4,7 +4,7 @@ import { fillTemplate, parseIsoDuration, parseMpd } from '../src/shared/dash';
 import { classify, extFor, mediaKey } from '../src/shared/detect';
 import { pickByLang, pickVariant, visibleMedia } from '../src/shared/quality';
 import { buildBasename, cleanTitle } from '../src/shared/naming';
-import { sanitizeSegment, sanitizeSubdir } from '../src/shared/util';
+import { sanitizeSegment, sanitizeSubdir, ytDlpCommand } from '../src/shared/util';
 import type { MediaItem } from '../src/shared/types';
 
 describe('hls', () => {
@@ -242,5 +242,19 @@ describe('naming', () => {
   it('cleans site suffixes', () => {
     expect(cleanTitle('(3) Cool Video - YouTube', 'youtube.com')).toBe('Cool Video');
     expect(cleanTitle('Watch | Vimeo', 'vimeo.com')).toBe('Watch');
+  });
+});
+
+describe('ytDlpCommand', () => {
+  const base = { url: 'https://cdn.example/v/master.m3u8', pageUrl: 'https://example.com/watch', headers: { referer: 'https://example.com/watch' } };
+  it('streams: media URL with the page Referer', () => {
+    expect(ytDlpCommand(base)).toBe("yt-dlp --referer 'https://example.com/watch' 'https://cdn.example/v/master.m3u8'");
+  });
+  it('site extractor items and inline manifests: page URL', () => {
+    expect(ytDlpCommand({ ...base, site: 'youtube' })).toBe("yt-dlp 'https://example.com/watch'");
+    expect(ytDlpCommand({ ...base, url: 'about:reelfetch-12' })).toBe("yt-dlp 'https://example.com/watch'");
+  });
+  it('uses the chosen variant and escapes quotes', () => {
+    expect(ytDlpCommand(base, "https://cdn.example/it's.mp4")).toBe("yt-dlp --referer 'https://example.com/watch' 'https://cdn.example/it%27s.mp4'");
   });
 });

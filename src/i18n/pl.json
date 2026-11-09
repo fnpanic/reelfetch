@@ -20,6 +20,7 @@
   "controls_title": "Sterowanie",
   "copy_to_clipboard": "Skopiuj informacje do schowka",
   "copy_url": "Kopiuj URL",
+  "copy_ytdlp": "Kopiuj polecenie yt-dlp",
   "details": "Szczegóły",
   "download_as": "Pobierz jako…",
   "download_audio_only": "Pobierz tylko dźwięk",
@@ -165,5 +166,6 @@
   "update_busy": "Najpierw zakończ lub anuluj trwające pobieranie.",
   "updates_title": "Aktualizacje",
   "update_manual_hint": "Pobierz nowy instalator i uruchom go, aby zaktualizować.",
-  "turbo_partial": "Częściowe: strona zatrzymała odtwarzanie, zapisano"
+  "turbo_partial": "Częściowe: strona zatrzymała odtwarzanie, zapisano",
+  "time_left": "pozostało $1"
 }

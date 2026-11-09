@@ -20,6 +20,7 @@
   "controls_title": "Controls",
   "copy_to_clipboard": "Copy information to clipboard",
   "copy_url": "Copy URL",
+  "copy_ytdlp": "Copy yt-dlp command",
   "details": "Details",
   "download_as": "Download As…",
   "download_audio_only": "Download audio only",
@@ -165,5 +166,6 @@
   "update_busy": "Finish or cancel the running downloads first.",
   "updates_title": "Updates",
   "update_manual_hint": "Download the new setup and run it to update.",
-  "turbo_partial": "Partial: the site stopped playback, saved"
+  "turbo_partial": "Partial: the site stopped playback, saved",
+  "time_left": "$1 left"
 }

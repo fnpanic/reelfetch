@@ -20,6 +20,7 @@
   "controls_title": "操作",
   "copy_to_clipboard": "情報をクリップボードにコピー",
   "copy_url": "URL をコピー",
+  "copy_ytdlp": "yt-dlp コマンドをコピー",
   "details": "詳細",
   "download_as": "名前を付けてダウンロード…",
   "download_audio_only": "音声のみダウンロード",
@@ -165,5 +166,6 @@
   "update_busy": "先に実行中のダウンロードを完了またはキャンセルしてください。",
   "updates_title": "更新",
   "update_manual_hint": "新しいセットアップをダウンロードして実行すると更新されます。",
-  "turbo_partial": "一部のみ: サイトが再生を停止しました。保存済み"
+  "turbo_partial": "一部のみ: サイトが再生を停止しました。保存済み",
+  "time_left": "残り $1"
 }

@@ -20,6 +20,7 @@
   "controls_title": "Vezérlők",
   "copy_to_clipboard": "Információk másolása a vágólapra",
   "copy_url": "URL másolása",
+  "copy_ytdlp": "yt-dlp parancs másolása",
   "details": "Részletek",
   "download_as": "Letöltés másként…",
   "download_audio_only": "Csak hang letöltése",
@@ -165,5 +166,6 @@
   "update_busy": "Előbb fejezze be vagy szakítsa meg a folyamatban lévő letöltéseket.",
   "updates_title": "Frissítések",
   "update_manual_hint": "Töltse le és futtassa az új telepítőt a frissítéshez.",
-  "turbo_partial": "Részleges: a webhely leállította a lejátszást, mentve"
+  "turbo_partial": "Részleges: a webhely leállította a lejátszást, mentve",
+  "time_left": "még $1"
 }

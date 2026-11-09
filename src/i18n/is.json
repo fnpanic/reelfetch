@@ -20,6 +20,7 @@
   "controls_title": "Stjórntæki",
   "copy_to_clipboard": "Afrita upplýsingar á klippispjald",
   "copy_url": "Afrita URL",
+  "copy_ytdlp": "Afrita yt-dlp skipun",
   "details": "Nánar",
   "download_as": "Sækja sem…",
   "download_audio_only": "Sækja eingöngu hljóð",
@@ -165,5 +166,6 @@
   "update_busy": "Ljúktu við eða hættu við niðurhöl í gangi fyrst.",
   "updates_title": "Uppfærslur",
   "update_manual_hint": "Sæktu nýja uppsetningarforritið og keyrðu það til að uppfæra.",
-  "turbo_partial": "Að hluta: vefurinn stöðvaði spilun, vistað"
+  "turbo_partial": "Að hluta: vefurinn stöðvaði spilun, vistað",
+  "time_left": "$1 eftir"
 }

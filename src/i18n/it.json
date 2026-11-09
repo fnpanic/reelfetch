@@ -20,6 +20,7 @@
   "controls_title": "Controlli",
   "copy_to_clipboard": "Copia le informazioni negli appunti",
   "copy_url": "Copia URL",
+  "copy_ytdlp": "Copia comando yt-dlp",
   "details": "Dettagli",
   "download_as": "Scarica come…",
   "download_audio_only": "Scarica solo audio",
@@ -165,5 +166,6 @@
   "update_busy": "Prima completa o annulla i download in corso.",
   "updates_title": "Aggiornamenti",
   "update_manual_hint": "Scarica il nuovo programma di installazione ed eseguilo per aggiornare.",
-  "turbo_partial": "Parziale: il sito ha interrotto la riproduzione, salvato"
+  "turbo_partial": "Parziale: il sito ha interrotto la riproduzione, salvato",
+  "time_left": "mancano $1"
 }

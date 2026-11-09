@@ -20,6 +20,7 @@
   "controls_title": "Controls",
   "copy_to_clipboard": "Copia la informació al porta-retalls",
   "copy_url": "Copia l'URL",
+  "copy_ytdlp": "Copia l’ordre de yt-dlp",
   "details": "Detalls",
   "download_as": "Anomena i baixa…",
   "download_audio_only": "Baixa només l'àudio",
@@ -165,5 +166,6 @@
   "update_busy": "Primer acabeu o cancel·leu les baixades en curs.",
   "updates_title": "Actualitzacions",
   "update_manual_hint": "Baixeu el nou instal·lador i executeu-lo per actualitzar.",
-  "turbo_partial": "Parcial: el lloc ha aturat la reproducció, desat"
+  "turbo_partial": "Parcial: el lloc ha aturat la reproducció, desat",
+  "time_left": "falten $1"
 }

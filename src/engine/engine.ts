@@ -373,6 +373,9 @@ async function downloadDirect(url: string, spool: Spool, ctl: Control, c: Counte
     const pos = spool.size;
     try {
       const res = await fetch(url, { credentials: 'include', signal: ctl.signal, headers: pos ? { Range: `bytes=${pos}-` } : {} });
+      // Server ignored the Range request: not retryable (HttpError 200), but say why instead of "HTTP 200".
+      if (pos && res.status === 200)
+        throw Object.assign(new HttpError(200, url), { message: 'The connection dropped and this server cannot resume downloads - retry the download' });
       if (!res.ok || !res.body || (pos && res.status !== 206)) throw new HttpError(res.status, url);
       if (total == null) {
         const len = Number(res.headers.get('content-length'));

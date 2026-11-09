@@ -20,6 +20,7 @@
   "controls_title": "控制",
   "copy_to_clipboard": "复制信息到剪贴板",
   "copy_url": "复制 URL",
+  "copy_ytdlp": "复制 yt-dlp 命令",
   "details": "详细信息",
   "download_as": "下载为…",
   "download_audio_only": "仅下载音频",
@@ -165,5 +166,6 @@
   "update_busy": "请先完成或取消正在进行的下载。",
   "updates_title": "更新",
   "update_manual_hint": "下载并运行新的安装程序以更新。",
-  "turbo_partial": "不完整：网站停止了播放，已保存"
+  "turbo_partial": "不完整：网站停止了播放，已保存",
+  "time_left": "剩余 $1"
 }

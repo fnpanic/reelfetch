@@ -20,6 +20,7 @@
   "controls_title": "Controles",
   "copy_to_clipboard": "Copiar informações para a área de transferência",
   "copy_url": "Copiar URL",
+  "copy_ytdlp": "Copiar comando do yt-dlp",
   "details": "Detalhes",
   "download_as": "Baixar como…",
   "download_audio_only": "Baixar somente o áudio",
@@ -165,5 +166,6 @@
   "update_busy": "Primeiro conclua ou cancele os downloads em andamento.",
   "updates_title": "Atualizações",
   "update_manual_hint": "Baixe o novo instalador e execute-o para atualizar.",
-  "turbo_partial": "Parcial: o site interrompeu a reprodução, salvo"
+  "turbo_partial": "Parcial: o site interrompeu a reprodução, salvo",
+  "time_left": "faltam $1"
 }

@@ -65,7 +65,9 @@ export function createEngineHost(emit: (e: EngineEvent) => Promise<unknown>) {
           { ...req.settings, preferredQuality: '480', downloadSubtitles: false, audioFormat: 'original' },
           { signal: AbortSignal.timeout(30000), stopped: () => true, onProgress: () => {}, previewSeconds: 6 },
         );
-        const url = URL.createObjectURL(new Blob([out.files[0].blob], { type: mimeForExt(out.files[0].ext) }));
+        // Copy into memory: the blob still points at the temp file, which is removed right below.
+        const bytes = await out.files[0].blob.arrayBuffer();
+        const url = URL.createObjectURL(new Blob([bytes], { type: mimeForExt(out.files[0].ext) }));
         await Promise.all(out.spools.map((s) => s.remove()));
         previews.set(req.media.id, url);
         // Small LRU: previews are a few hundred KB each.

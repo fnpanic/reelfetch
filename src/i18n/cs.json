@@ -20,6 +20,7 @@
   "controls_title": "Ovládání",
   "copy_to_clipboard": "Zkopírovat informace do schránky",
   "copy_url": "Kopírovat URL",
+  "copy_ytdlp": "Kopírovat příkaz yt-dlp",
   "details": "Podrobnosti",
   "download_as": "Stáhnout jako…",
   "download_audio_only": "Stáhnout pouze zvuk",
@@ -165,5 +166,6 @@
   "update_busy": "Nejprve dokončete nebo zrušte probíhající stahování.",
   "updates_title": "Aktualizace",
   "update_manual_hint": "Stáhněte nový instalátor a spusťte ho pro aktualizaci.",
-  "turbo_partial": "Částečné: web zastavil přehrávání, uloženo"
+  "turbo_partial": "Částečné: web zastavil přehrávání, uloženo",
+  "time_left": "zbývá $1"
 }

@@ -20,6 +20,7 @@
   "controls_title": "Cumandi",
   "copy_to_clipboard": "Cupià l'infurmazioni in u fermacarte",
   "copy_url": "Cupià l'URL",
+  "copy_ytdlp": "Cupià u cumandu yt-dlp",
   "details": "Detaglii",
   "download_as": "Scaricà cum'è…",
   "download_audio_only": "Scaricà solu l'audio",
@@ -165,5 +166,6 @@
   "update_busy": "Prima finite o abbandunate i scaricamenti in corsu.",
   "updates_title": "Aghjurnamenti",
   "update_manual_hint": "Scaricate u novu installatore è lanciatelu per aghjurnà.",
-  "turbo_partial": "Parziale: u situ hà firmatu a lettura, salvatu"
+  "turbo_partial": "Parziale: u situ hà firmatu a lettura, salvatu",
+  "time_left": "restanu $1"
 }

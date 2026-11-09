@@ -20,6 +20,7 @@
   "controls_title": "Kontroller",
   "copy_to_clipboard": "Kopier informasjon til utklippstavlen",
   "copy_url": "Kopier URL",
+  "copy_ytdlp": "Kopier yt-dlp-kommando",
   "details": "Detaljer",
   "download_as": "Last ned som…",
   "download_audio_only": "Last ned kun lyd",
@@ -165,5 +166,6 @@
   "update_busy": "Fullfør eller avbryt nedlastingene som pågår først.",
   "updates_title": "Oppdateringer",
   "update_manual_hint": "Last ned det nye installasjonsprogrammet og kjør det for å oppdatere.",
-  "turbo_partial": "Delvis: nettstedet stoppet avspillingen, lagret"
+  "turbo_partial": "Delvis: nettstedet stoppet avspillingen, lagret",
+  "time_left": "$1 igjen"
 }

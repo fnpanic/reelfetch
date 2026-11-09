@@ -20,6 +20,7 @@
   "controls_title": "Commandes",
   "copy_to_clipboard": "Copier les informations dans le presse-papiers",
   "copy_url": "Copier l'URL",
+  "copy_ytdlp": "Copier la commande yt-dlp",
   "details": "Détails",
   "download_as": "Enregistrer sous…",
   "download_audio_only": "Télécharger l'audio uniquement",
@@ -165,5 +166,6 @@
   "update_busy": "Terminez ou annulez d’abord les téléchargements en cours.",
   "updates_title": "Mises à jour",
   "update_manual_hint": "Téléchargez le nouvel installateur et lancez-le pour mettre à jour.",
-  "turbo_partial": "Partiel : le site a arrêté la lecture, enregistré"
+  "turbo_partial": "Partiel : le site a arrêté la lecture, enregistré",
+  "time_left": "encore $1"
 }

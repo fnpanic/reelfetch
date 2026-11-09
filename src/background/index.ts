@@ -31,11 +31,9 @@ function applyPostName(item: MediaItem) {
 let jobs: Job[] = [];
 let settings: Settings;
 const isFirefox = !chrome.offscreen;
-/** Jobs handled by the stream engine (everything except plain file downloads and MSE captures). */
 const variantOf = (j: Job) => j.media.variants?.find((v) => v.id === j.options.variantId) ?? j.media.variants?.[0];
-/** Jobs handled by the stream engine: everything except plain single-file downloads and MSE captures. */
-// Plain files go through the engine too and reach the browser as blob: URLs, so a download manager
-// extension (AB Download Manager, IDM, ...) cannot take them over and drop ReelFetch's file name.
+/** Jobs handled by the stream engine: everything except MSE captures. Plain files go through it too and reach
+ * the browser as blob: URLs, so a download-manager extension (AB Download Manager, IDM, ...) can't take them over. */
 const isEngineJob = (j: Job) => j.media.kind !== 'mse';
 const isTurbo = (j: Job) => j.media.kind === 'mse' && (!!j.options.turbo || !!j.media.captureOnly);
 
@@ -556,7 +554,7 @@ async function finish(j: Job, size?: number) {
   if (settings.historyEnabled && !j.media.incognito) {
     await addHistory({
       id: j.id,
-      title: j.media.pageTitle || j.basename,
+      title: j.media.title || j.media.pageTitle || j.basename, // feed items carry their own post title
       url: j.media.url,
       pageUrl: j.media.pageUrl,
       filename: j.filename ?? j.basename,
@@ -579,7 +577,8 @@ async function fail(j: Job, error: string) {
   j.status = 'error';
   j.error = error;
   await cleanup(j);
-  if (settings.notifyOnComplete) notify(j.id, t('notif_failed'), `${j.basename}: ${error}`);
+  if (settings.notifyOnComplete && (settings.privateNotifications || !j.media.incognito))
+    notify(j.id, t('notif_failed'), `${j.basename}: ${error}`);
   changed();
   pump();
 }

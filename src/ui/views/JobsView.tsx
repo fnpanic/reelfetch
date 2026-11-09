@@ -13,6 +13,21 @@ function percent(j: Job): number | undefined {
   return undefined;
 }
 
+/** Smoothed download speed per job (bytes/s), sampled whenever the background pushes progress. */
+const samples = new Map<string, { at: number; bytes: number; speed?: number }>();
+function speedOf(j: Job): number | undefined {
+  if (j.status !== 'running' || (j.progress.phase ?? 'download') !== 'download') return;
+  const now = Date.now();
+  const s = samples.get(j.id);
+  if (!s || j.progress.bytes < s.bytes) return void samples.set(j.id, { at: now, bytes: j.progress.bytes });
+  const dt = (now - s.at) / 1000;
+  if (dt < 1) return s.speed; // re-renders between pushes keep the last value
+  const inst = (j.progress.bytes - s.bytes) / dt;
+  const speed = s.speed == null ? inst : s.speed * 0.7 + inst * 0.3;
+  samples.set(j.id, { at: now, bytes: j.progress.bytes, speed });
+  return speed;
+}
+
 function statusText(j: Job): string {
   const p = j.progress;
   if (j.status === 'queued') return t('status_queued');
@@ -27,7 +42,18 @@ function statusText(j: Job): string {
   if (p.phase === 'convert') return t('status_converting');
   if (p.phase === 'save') return t('status_saving');
   const seg = p.segmentsTotal ? `${p.segments ?? 0}/${p.segmentsTotal}` : '';
-  return [t('status_downloading'), formatBytes(p.bytes), p.total ? `/ ${formatBytes(p.total)}` : '', seg].filter(Boolean).join(' ');
+  const speed = speedOf(j);
+  const left = speed && p.total && p.total > p.bytes ? (p.total - p.bytes) / speed : undefined;
+  return [
+    t('status_downloading'),
+    formatBytes(p.bytes),
+    p.total ? `/ ${formatBytes(p.total)}` : '',
+    seg,
+    speed ? `· ${formatBytes(speed)}/s` : '',
+    left != null && left < 360000 ? `· ${t('time_left', formatDuration(left))}` : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 }
 
 export function JobsView({ jobs }: { jobs: Job[] }) {

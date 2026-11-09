@@ -20,6 +20,7 @@
   "controls_title": "컨트롤",
   "copy_to_clipboard": "정보를 클립보드에 복사",
   "copy_url": "URL 복사",
+  "copy_ytdlp": "yt-dlp 명령 복사",
   "details": "세부정보",
   "download_as": "다른 이름으로 다운로드…",
   "download_audio_only": "오디오만 다운로드",
@@ -165,5 +166,6 @@
   "update_busy": "먼저 진행 중인 다운로드를 완료하거나 취소하세요.",
   "updates_title": "업데이트",
   "update_manual_hint": "새 설치 프로그램을 다운로드하여 실행하면 업데이트됩니다.",
-  "turbo_partial": "일부만: 사이트가 재생을 중지함, 저장됨"
+  "turbo_partial": "일부만: 사이트가 재생을 중지함, 저장됨",
+  "time_left": "$1 남음"
 }

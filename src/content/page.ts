@@ -85,7 +85,11 @@ function scanMeta() {
   const og: Record<string, string> = {};
   document.querySelectorAll<HTMLMetaElement>('meta[property^="og:video"], meta[name^="twitter:player:stream"]').forEach((m) => {
     const key = m.getAttribute('property') ?? m.name;
-    og[key] = key.endsWith(':type') ? m.content : new URL(m.content, location.href).href;
+    try {
+      og[key] = key.endsWith(':type') ? m.content : new URL(m.content, location.href).href;
+    } catch {
+      /* one malformed URL must not stop the JSON-LD / Open Graph scan */
+    }
   });
   const items = genericMeta(jsonLd, og, document.title);
   const key = JSON.stringify(items);

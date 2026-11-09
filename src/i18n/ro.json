@@ -20,6 +20,7 @@
   "controls_title": "Comenzi",
   "copy_to_clipboard": "Copiază informațiile în clipboard",
   "copy_url": "Copiază URL",
+  "copy_ytdlp": "Copiază comanda yt-dlp",
   "details": "Detalii",
   "download_as": "Descarcă ca…",
   "download_audio_only": "Descarcă doar audio",
@@ -165,5 +166,6 @@
   "update_busy": "Mai întâi finalizați sau anulați descărcările în curs.",
   "updates_title": "Actualizări",
   "update_manual_hint": "Descărcați noul program de instalare și rulați-l pentru actualizare.",
-  "turbo_partial": "Parțial: site-ul a oprit redarea, salvat"
+  "turbo_partial": "Parțial: site-ul a oprit redarea, salvat",
+  "time_left": "mai rămân $1"
 }

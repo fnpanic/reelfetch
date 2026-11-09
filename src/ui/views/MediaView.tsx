@@ -4,7 +4,7 @@ import { cleanTitle } from '../../shared/naming';
 import { pickVariant } from '../../shared/quality';
 import type { Settings } from '../../shared/settings';
 import type { MediaItem } from '../../shared/types';
-import { formatBytes, formatDuration, hostOf, hostMatches } from '../../shared/util';
+import { formatBytes, formatDuration, hostOf, hostMatches, ytDlpCommand } from '../../shared/util';
 import { send, type AppState } from '../hooks';
 import { Icon } from '../Icon';
 
@@ -271,6 +271,18 @@ function MediaRow({
                 }}
               >
                 <Icon name="copy" /> {t('copy_url')}
+              </button>
+            )}
+            {!capture && !item.drm && (
+              <button
+                role="menuitem"
+                onClick={() => {
+                  void navigator.clipboard.writeText(ytDlpCommand(item, item.kind === 'direct' ? selected?.ref : undefined));
+                  setMenu(false);
+                  setNote(t('copied'));
+                }}
+              >
+                <Icon name="copy" /> {t('copy_ytdlp')}
               </button>
             )}
             {item.kind === 'direct' && !selected?.audioRef && (

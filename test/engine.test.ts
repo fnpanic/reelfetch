@@ -67,7 +67,7 @@ beforeAll(async () => {
         res.statusCode = 410;
         return res.end();
       }
-      if (path === '/drop.bin' && !req.headers.range) {
+      if ((path === '/drop.bin' || path === '/norange.bin') && (!req.headers.range || path === '/norange.bin')) {
         // Connection drops halfway through: the downloader must resume with a Range request.
         res.setHeader('Content-Length', BIG.byteLength);
         res.write(BIG.subarray(0, 10 * 2 ** 20));
@@ -254,6 +254,10 @@ describe('engine', () => {
 
   it('resumes a dropped connection with a Range request', async () => {
     expect(await same(await download(job(media('direct', 'drop.bin')), settings, ctl()))).toBe(true);
+  });
+
+  it('explains a dropped connection on a server without Range support (no "HTTP 200")', async () => {
+    await expect(download(job(media('direct', 'norange.bin')), settings, ctl())).rejects.toThrow(/cannot resume/);
   });
 
   it('uses inline DASH manifests (Facebook style)', async () => {

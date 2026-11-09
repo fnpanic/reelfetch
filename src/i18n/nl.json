@@ -20,6 +20,7 @@
   "controls_title": "Besturing",
   "copy_to_clipboard": "Informatie naar klembord kopiëren",
   "copy_url": "URL kopiëren",
+  "copy_ytdlp": "yt-dlp-opdracht kopiëren",
   "details": "Details",
   "download_as": "Downloaden als…",
   "download_audio_only": "Alleen audio downloaden",
@@ -165,5 +166,6 @@
   "update_busy": "Rond eerst de lopende downloads af of annuleer ze.",
   "updates_title": "Updates",
   "update_manual_hint": "Download de nieuwe installer en voer die uit om bij te werken.",
-  "turbo_partial": "Gedeeltelijk: de site stopte het afspelen, opgeslagen"
+  "turbo_partial": "Gedeeltelijk: de site stopte het afspelen, opgeslagen",
+  "time_left": "nog $1"
 }

@@ -61,3 +61,16 @@ export function formatDuration(sec?: number): string {
 }
 
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * A yt-dlp command for media ReelFetch can't handle itself. Sites with a site extractor (YouTube, Vimeo, ...)
+ * get the page URL, which yt-dlp understands better; streams and files get their own URL plus the Referer.
+ * Single quotes work in bash, zsh and PowerShell; a quote inside a URL is percent-encoded.
+ */
+export function ytDlpCommand(m: { url: string; pageUrl: string; site?: string; headers: { referer?: string } }, ref?: string): string {
+  const q = (s: string) => `'${s.replace(/'/g, '%27')}'`;
+  const target = ref && /^https?:/.test(ref) ? ref : m.url;
+  if (m.site || !/^https?:/.test(target)) return `yt-dlp ${q(m.pageUrl)}`;
+  const referer = m.headers.referer ?? m.pageUrl;
+  return `yt-dlp${referer ? ` --referer ${q(referer)}` : ''} ${q(target)}`;
+}

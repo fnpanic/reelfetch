@@ -20,6 +20,7 @@
   "controls_title": "Wodźenje",
   "copy_to_clipboard": "Informacije do mjezyskładki kopěrować",
   "copy_url": "URL kopěrować",
+  "copy_ytdlp": "Přikaz yt-dlp kopěrować",
   "details": "Podrobnosće",
   "download_as": "Sćahnyć jako…",
   "download_audio_only": "Jenož awdio sćahnyć",
@@ -165,5 +166,6 @@
   "update_busy": "Dokónčće abo přetorhńće najprjedy běžace sćehnjenja.",
   "updates_title": "Aktualizacije",
   "update_manual_hint": "Sćehńće nowy instalaciski program a startujće jón za aktualizaciju.",
-  "turbo_partial": "Njedospołne: sydło je wothraće zastajiło, składowane"
+  "turbo_partial": "Njedospołne: sydło je wothraće zastajiło, składowane",
+  "time_left": "hišće $1"
 }

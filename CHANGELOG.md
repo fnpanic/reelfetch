@@ -3,6 +3,27 @@
 All notable changes to ReelFetch. Versions follow [semantic versioning](https://semver.org/); dates are release
 dates. Releases are published to the update server with `npm run release:deploy` (see README → Publishing a release).
 
+## 1.3.0 - 2026-11-09
+
+### Added
+- **Download speed and time remaining** in the Downloads tab (e.g. `12.3 MB / 80 MB · 4.1 MB/s · 0:17 left`).
+- **Copy yt-dlp command** in the ⋮ menu: a ready-to-paste `yt-dlp` command with the page's Referer for streams
+  and files, or the page URL for sites yt-dlp knows (YouTube, Vimeo, ...). A fallback for anything ReelFetch
+  can't save itself.
+
+### Fixed
+- **Hover video previews play again.** The preview clip pointed at a temporary file that was deleted right after it
+  was built, so the player got nothing (since 1.1.0).
+- "Download failed" notifications no longer show private-window file names when private notifications are off.
+- A resumed download on a server that ignores `Range` requests now says so instead of failing with `HTTP 200`.
+- One malformed `og:video` URL no longer stops JSON-LD / Open Graph video detection on the page.
+- Download history keeps a feed video's own post title (Reddit) instead of the subreddit's.
+- The AES-128 key cache is capped (long live streams rotate keys).
+
+### Tests
+- e2e fetches the preview clip and checks its bytes (the old check only looked at the URL).
+- Engine test for the no-`Range` resume error; unit tests for the yt-dlp command.
+
 ## 1.2.4 - 2026-11-04
 
 ### Fixed

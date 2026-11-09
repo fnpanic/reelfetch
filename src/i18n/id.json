@@ -20,6 +20,7 @@
   "controls_title": "Kontrol",
   "copy_to_clipboard": "Salin informasi ke papan klip",
   "copy_url": "Salin URL",
+  "copy_ytdlp": "Salin perintah yt-dlp",
   "details": "Detail",
   "download_as": "Unduh Sebagai…",
   "download_audio_only": "Unduh hanya audio",
@@ -165,5 +166,6 @@
   "update_busy": "Selesaikan atau batalkan unduhan yang sedang berjalan terlebih dahulu.",
   "updates_title": "Pembaruan",
   "update_manual_hint": "Unduh penginstal baru dan jalankan untuk memperbarui.",
-  "turbo_partial": "Sebagian: situs menghentikan pemutaran, disimpan"
+  "turbo_partial": "Sebagian: situs menghentikan pemutaran, disimpan",
+  "time_left": "sisa $1"
 }

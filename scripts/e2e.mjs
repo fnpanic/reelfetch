@@ -17,8 +17,8 @@ const ext = join(root, 'dist', 'chrome');
 const fixtures = join(root, 'test', 'fixtures');
 // Explicit path, else Playwright's own Chromium, else any cached Playwright Chromium on Windows.
 const cached = join(process.env.LOCALAPPDATA ?? '', 'ms-playwright', 'chromium-1243', 'chrome-win64', 'chrome.exe');
-const chromePath = process.argv[2] ?? (existsSync(chromium.executablePath()) ? chromium.executablePath() : cached);
-const ffprobe = process.argv[3] ?? 'C:/Program Files/DownloadHelper CoApp/ffprobe.exe';
+const chromePath = process.argv[2] || (existsSync(chromium.executablePath()) ? chromium.executablePath() : cached);
+const ffprobe = process.argv[3] || 'C:/Program Files/DownloadHelper CoApp/ffprobe.exe';
 const shots = process.env.E2E_SHOTS ?? tmpdir();
 
 const log = [];
@@ -550,6 +550,9 @@ try {
   // Hover preview: a short clip built by the engine from the HLS stream.
   const previewUrl = await api((id) => chrome.runtime.sendMessage({ type: 'preview', mediaId: id }), hlsMaster.id);
   check(typeof previewUrl === 'string' && previewUrl.startsWith('blob:'), `engine preview clip (${String(previewUrl).slice(0, 40)})`);
+  // The UI plays this URL, so it must still be readable after the engine removed its temp files.
+  const previewBytes = await api((u) => fetch(u).then((r) => r.arrayBuffer()).then((b) => b.byteLength, (e) => String(e)), previewUrl);
+  check(typeof previewBytes === 'number' && previewBytes > 1000, `preview clip is readable (${previewBytes} bytes)`);
 
   // Default action: copy URL instead of downloading.
   await api(async () => {

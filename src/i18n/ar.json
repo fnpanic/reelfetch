@@ -20,6 +20,7 @@
   "controls_title": "عناصر التحكم",
   "copy_to_clipboard": "نسخ المعلومات إلى الحافظة",
   "copy_url": "نسخ URL",
+  "copy_ytdlp": "نسخ أمر yt-dlp",
   "details": "التفاصيل",
   "download_as": "تنزيل باسم…",
   "download_audio_only": "تنزيل الصوت فقط",
@@ -165,5 +166,6 @@
   "update_busy": "أنهِ التنزيلات الجارية أو ألغِها أولًا.",
   "updates_title": "التحديثات",
   "update_manual_hint": "نزّل برنامج الإعداد الجديد وشغّله للتحديث.",
-  "turbo_partial": "جزئي: أوقف الموقع التشغيل، تم حفظ"
+  "turbo_partial": "جزئي: أوقف الموقع التشغيل، تم حفظ",
+  "time_left": "متبقٍ $1"
 }

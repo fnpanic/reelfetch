@@ -20,6 +20,7 @@
   "controls_title": "Steuerung",
   "copy_to_clipboard": "Informationen in die Zwischenablage kopieren",
   "copy_url": "URL kopieren",
+  "copy_ytdlp": "yt-dlp-Befehl kopieren",
   "details": "Details",
   "download_as": "Speichern unter…",
   "download_audio_only": "Nur Audio herunterladen",
@@ -165,5 +166,6 @@
   "update_busy": "Erst laufende Downloads abschließen oder abbrechen.",
   "updates_title": "Updates",
   "update_manual_hint": "Neues Setup herunterladen und ausführen, um zu aktualisieren.",
-  "turbo_partial": "Unvollständig: Die Website hat die Wiedergabe gestoppt, gespeichert"
+  "turbo_partial": "Unvollständig: Die Website hat die Wiedergabe gestoppt, gespeichert",
+  "time_left": "noch $1"
 }

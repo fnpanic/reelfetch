@@ -34,6 +34,9 @@ list, and how to diagnose the problems that are most often reported.
 | Large files are **slow** (well under the connection's speed) | 1.2.3's per-chunk requests. Fixed in 1.2.4. | Update to 1.2.4 or later. |
 | Feed videos (Reddit) are named after the **subreddit** | Older than 1.2.2, or the post wasn't on the page when the video was detected. | Update; let the video start playing in the feed (that's when it is detected). |
 | **HTTP 503/5xx** errors | Server-side failure. Retried automatically with backoff (about 12 s in total) before the job fails. | Use **Retry** later. |
+| Hover preview shows nothing | 1.1.0-1.2.4 deleted the preview clip's temp file before it played. Fixed in 1.3.0. | Update to 1.3.0 or later. |
+| "The connection dropped and this server cannot resume downloads" | The connection broke mid-file and the server ignores `Range` requests, so the file can't be continued. | **Retry** starts the file from the beginning. |
+| ReelFetch can't save it at all | Unsupported site or stream. | ⋮ → **Copy yt-dlp command** and run it in a terminal ([yt-dlp](https://github.com/yt-dlp/yt-dlp)). |
 | "DRM-protected" | Widevine/PlayReady/FairPlay or HLS `SAMPLE-AES`. | Not supported by design. |
 
 ## Updates and running downloads

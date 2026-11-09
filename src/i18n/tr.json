@@ -20,6 +20,7 @@
   "controls_title": "Denetimler",
   "copy_to_clipboard": "Bilgileri panoya kopyala",
   "copy_url": "URL'yi kopyala",
+  "copy_ytdlp": "yt-dlp komutunu kopyala",
   "details": "Ayrıntılar",
   "download_as": "Farklı İndir…",
   "download_audio_only": "Yalnızca sesi indir",
@@ -165,5 +166,6 @@
   "update_busy": "Önce devam eden indirmeleri bitirin veya iptal edin.",
   "updates_title": "Güncellemeler",
   "update_manual_hint": "Güncellemek için yeni kurulumu indirip çalıştırın.",
-  "turbo_partial": "Kısmi: site oynatmayı durdurdu, kaydedilen"
+  "turbo_partial": "Kısmi: site oynatmayı durdurdu, kaydedilen",
+  "time_left": "$1 kaldı"
 }

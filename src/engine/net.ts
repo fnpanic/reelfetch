@@ -61,6 +61,7 @@ function getKey(uri: string, signal?: AbortSignal): Promise<CryptoKey> {
       return crypto.subtle.importKey('raw', raw as BufferSource, 'AES-CBC', false, ['decrypt']);
     });
     k.catch(() => keyCache.delete(uri));
+    if (keyCache.size >= 200) keyCache.delete(keyCache.keys().next().value!); // live streams rotate keys
     keyCache.set(uri, k);
   }
   return k;

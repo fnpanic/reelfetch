@@ -65,10 +65,10 @@ without the setup (zip, Firefox) only show a banner linking to the new download.
 2. Click the ReelFetch icon (or press **Alt+↑**). Every detected media is listed with its type, quality, duration,
    size and languages.
 3. Click the main button (by default **Download**; configurable to *Download As…*, *Audio* or *Copy URL*), or open
-   the **⋮** menu for *Download*, *Download As…*, *Download audio only*, *Copy URL*, *Play*, *Turbo capture*,
+   the **⋮** menu for *Download*, *Download As…*, *Download audio only*, *Copy URL*, *Copy yt-dlp command*, *Play*, *Turbo capture*,
    *Pick the title from the page…* and *Details*. Pick a quality in the drop-down when a stream offers several.
    Hover a thumbnail for a short video preview (Settings → Media preview).
-4. Watch progress in **Downloads**. Live streams show **Record** and can be stopped at any time; the recording is saved.
+4. Watch progress, speed and time remaining in **Downloads**. Live streams show **Record** and can be stopped at any time; the recording is saved.
 5. **Alt+↓** runs the default action on the best media of the current tab. The right-click menu offers the same.
 
 **YouTube, Vimeo, Bilibili, Facebook, Instagram, VK, OK.ru:** site extractors read the player's own data and list
