@@ -18,7 +18,7 @@ Built with React, TypeScript, Vite and [mediabunny](https://mediabunny.dev) (a p
    *Run anyway*).
 2. The setup copies the extension to `%LOCALAPPDATA%\ReelFetch\extension`, puts that path on the clipboard and opens
    the browser's extensions page (Chrome, else Edge, else Brave). There: switch on **Developer mode**, click
-   **Load unpacked**, paste the path and pick **Select folder**. Browsers do not let any installer add an extension
+   **Load unpacked**, paste the path (the last setup page has a copy button next to it) and pick **Select folder**. Browsers do not let any installer add an extension
    from outside their store silently, so this one confirmation is required once.
 3. Done. ReelFetch checks for updates every 6 hours (Settings → **Updates** → *Check for updates* does it now) and
    installs them itself when no download is running - or shows an **Update now** banner if automatic updates are off.

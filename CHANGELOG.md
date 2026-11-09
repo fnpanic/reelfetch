@@ -3,6 +3,21 @@
 All notable changes to ReelFetch. Versions follow [semantic versioning](https://semver.org/); dates are release
 dates. Releases are published to the update server with `npm run release:deploy` (see README → Publishing a release).
 
+## 1.3.1 - 2026-11-09
+
+### Added
+- **Windows setup: copy button for the extension folder.** The last page shows the folder in a read-only field with a
+  copy icon next to it, for pasting into "Load unpacked" again if the clipboard was overwritten. The field shows the
+  folder actually installed to (before, the text always named the default folder).
+
+### Fixed
+- The setup's clipboard copy works for user names containing an apostrophe (`C:UsersO'Brien`).
+
+### Tests
+- `npm run e2e:update` no longer deletes the updater registration of a real ReelFetch install on the test machine
+  (its uninstall step removed the shared registry keys, which silently stopped automatic updates). It now waits for
+  the uninstaller to finish and restores the keys.
+
 ## 1.3.0 - 2026-11-09
 
 ### Added

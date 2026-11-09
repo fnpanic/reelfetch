@@ -66,12 +66,35 @@ en.StepsTitle=One last step in your browser
 de.StepsTitle=Ein letzter Schritt im Browser
 en.StepsSub=Browsers only accept extensions from outside their store after you confirm it once.
 de.StepsSub=Browser akzeptieren Erweiterungen außerhalb ihres Stores erst nach einer einmaligen Bestätigung.
-en.Steps=1.  On the extensions page that opens, switch on "Developer mode" (top right).%n%n2.  Click "Load unpacked".%n%n3.  Paste this folder into the address bar of the dialog (it is already on your clipboard) and click "Select folder":%n%n      %1%n%n4.  Pin ReelFetch with the puzzle icon in the toolbar.%n%nThat's it. Already installed? Nothing to do: the new version is in place. Future updates install themselves.
-de.Steps=1.  Auf der Erweiterungsseite, die sich öffnet, oben rechts den „Entwicklermodus“ einschalten.%n%n2.  Auf „Entpackte Erweiterung laden“ klicken.%n%n3.  Diesen Ordner in die Adresszeile des Dialogs einfügen (er ist bereits in der Zwischenablage) und „Ordner auswählen“ klicken:%n%n      %1%n%n4.  ReelFetch über das Puzzle-Symbol in der Symbolleiste anheften.%n%nFertig. Schon installiert? Dann ist nichts zu tun: Die neue Version ist bereits da. Künftige Updates installieren sich selbst.
+en.StepsTop=1.  On the extensions page that opens, switch on "Developer mode" (top right).%n%n2.  Click "Load unpacked".%n%n3.  Paste this folder into the address bar of the dialog (it is already on your clipboard) and click "Select folder":
+de.StepsTop=1.  Auf der Erweiterungsseite, die sich öffnet, oben rechts den „Entwicklermodus“ einschalten.%n%n2.  Auf „Entpackte Erweiterung laden“ klicken.%n%n3.  Diesen Ordner in die Adresszeile des Dialogs einfügen (er ist bereits in der Zwischenablage) und „Ordner auswählen“ klicken:
+en.StepsBottom=4.  Pin ReelFetch with the puzzle icon in the toolbar.%n%nThat's it. Already installed? Nothing to do: the new version is in place. Future updates install themselves.
+de.StepsBottom=4.  ReelFetch über das Puzzle-Symbol in der Symbolleiste anheften.%n%nFertig. Schon installiert? Dann ist nichts zu tun: Die neue Version ist bereits da. Künftige Updates installieren sich selbst.
+en.CopyPath=Copy path
+de.CopyPath=Pfad kopieren
 
 [Code]
 var
-  StepsPage: TOutputMsgWizardPage;
+  StepsPage: TWizardPage;
+  PathEdit: TNewEdit;
+  CopyBtn: TNewButton;
+
+{ PowerShell single-quoted string: a quote inside the path (C:\Users\O'Brien) is doubled. }
+procedure SetClipboard(const S: String);
+var
+  Q: String;
+  Code: Integer;
+begin
+  Q := S;
+  StringChangeEx(Q, '''', '''''', True);
+  Exec('powershell.exe', '-NoProfile -Command "Set-Clipboard -Value ''' + Q + '''"', '', SW_HIDE, ewWaitUntilTerminated, Code);
+end;
+
+procedure CopyBtnClick(Sender: TObject);
+begin
+  SetClipboard(PathEdit.Text);
+  CopyBtn.Caption := #$E73E; { check mark: copied }
+end;
 
 function JsonPath(const S: String): String;
 begin
@@ -107,16 +130,51 @@ begin
   else Result := 'chrome://extensions';
 end;
 
-procedure InitializeWizard;
+function AddText(const Caption: String; Top: Integer): TNewStaticText;
 begin
-  StepsPage := CreateOutputMsgPage(wpInstalling, ExpandConstant('{cm:StepsTitle}'), ExpandConstant('{cm:StepsSub}'),
-    FmtMessage(ExpandConstant('{cm:Steps}'), [ExpandConstant('{localappdata}\ReelFetch\extension')]));
+  Result := TNewStaticText.Create(StepsPage);
+  Result.Parent := StepsPage.Surface;
+  Result.Top := Top;
+  Result.Width := StepsPage.SurfaceWidth;
+  Result.WordWrap := True;
+  Result.AutoSize := True;
+  Result.Caption := Caption;
+end;
+
+{ Steps 1-3, the folder in a read-only field with a copy button, then step 4. }
+procedure InitializeWizard;
+var
+  Top: TNewStaticText;
+begin
+  StepsPage := CreateCustomPage(wpInstalling, ExpandConstant('{cm:StepsTitle}'), ExpandConstant('{cm:StepsSub}'));
+  Top := AddText(ExpandConstant('{cm:StepsTop}'), 0);
+  PathEdit := TNewEdit.Create(StepsPage);
+  PathEdit.Parent := StepsPage.Surface;
+  PathEdit.Top := Top.Top + Top.Height + ScaleY(10);
+  PathEdit.Width := StepsPage.SurfaceWidth - ScaleX(40);
+  PathEdit.ReadOnly := True;
+  CopyBtn := TNewButton.Create(StepsPage);
+  CopyBtn.Parent := StepsPage.Surface;
+  CopyBtn.Top := PathEdit.Top;
+  CopyBtn.Left := PathEdit.Width + ScaleX(6);
+  CopyBtn.Width := ScaleX(34);
+  CopyBtn.Height := PathEdit.Height;
+  CopyBtn.Font.Name := 'Segoe MDL2 Assets'; { Windows 10/11 icon font: E8C8 = Copy }
+  CopyBtn.Caption := #$E8C8;
+  CopyBtn.Hint := ExpandConstant('{cm:CopyPath}');
+  CopyBtn.ShowHint := True;
+  CopyBtn.OnClick := @CopyBtnClick;
+  AddText(ExpandConstant('{cm:StepsBottom}'), PathEdit.Top + PathEdit.Height + ScaleY(14));
+end;
+
+procedure CurPageChanged(CurPageID: Integer);
+begin
+  if CurPageID = StepsPage.ID then PathEdit.Text := ExpandConstant('{app}\extension');
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   Dir, Host: String;
-  Code: Integer;
 begin
   if CurStep <> ssPostInstall then Exit;
   Dir := ExpandConstant('{app}');
@@ -126,5 +184,5 @@ begin
   SaveStringToFile(Dir + '\updater\config.json',
     '{"base":"{#UpdateBase}","extensionDir":"' + JsonPath(Dir + '\extension') + '"}', False);
   { The "Load unpacked" dialog accepts a pasted path. }
-  Exec('powershell.exe', '-NoProfile -Command "Set-Clipboard -Value ''' + Dir + '\extension''"', '', SW_HIDE, ewWaitUntilTerminated, Code);
+  SetClipboard(Dir + '\extension');
 end;

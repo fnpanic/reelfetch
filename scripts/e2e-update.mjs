@@ -32,6 +32,11 @@ const ps = (cmd) => execFileSync('powershell.exe', ['-NoProfile', '-Command', cm
 const hostKey = 'HKCU:\\Software\\Chromium\\NativeMessagingHosts\\app.reelfetch.updater';
 
 execFileSync(process.execPath, ['scripts/release.mjs'], { cwd: root, stdio: 'inherit', env: { ...process.env, REELFETCH_UPDATE_URL: base } });
+// The setup and its uninstaller overwrite/delete these keys, which a real install on this machine also uses.
+const realHosts = ['Google\\Chrome', 'Microsoft\\Edge', 'BraveSoftware\\Brave-Browser', 'Chromium']
+  .map((b) => `HKCU:\\Software\\${b}\\NativeMessagingHosts\\app.reelfetch.updater`)
+  .map((k) => [k, ps(`if (Test-Path '${k}') { (Get-ItemProperty '${k}').'(default)' }`)])
+  .filter(([, v]) => v);
 const setup = join(root, 'release', `ReelFetch-Setup-${pkg.version}.exe`);
 const dir = mkdtempSync(join(tmpdir(), 'rf-setup-'));
 execFileSync(setup, ['/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', `/DIR=${dir}`]);
@@ -113,8 +118,12 @@ try {
   await ctx.close();
   server.close();
   execFileSync(join(dir, 'unins000.exe'), ['/VERYSILENT', '/SUPPRESSMSGBOXES']);
-  for (let i = 0; i < 20 && existsSync(extDir); i++) await sleep(500);
+  // The uninstaller hands off to a copy of itself and returns at once: wait until it is really done.
+  for (let i = 0; i < 40 && (existsSync(extDir) || ps(`Test-Path '${hostKey}'`) === 'True'); i++) await sleep(500);
   check(!existsSync(extDir) && ps(`Test-Path '${hostKey}'`) === 'False', 'uninstall removed files and registry entries');
+  // The keys are shared with a real ReelFetch install on this machine: put its registration back.
+  for (const [k, v] of realHosts) ps(`New-Item -Force '${k}' | Out-Null; Set-ItemProperty '${k}' '(default)' '${v.replace(/'/g, "''")}'`);
+  if (realHosts.length) check(realHosts.every(([k]) => ps(`Test-Path '${k}'`) === 'True'), `restored the real install's updater registration (${realHosts.length} browsers)`);
   // dist/ was built against the local test server: restore the normal build (browsers may load it).
   execFileSync(process.execPath, ['scripts/build.mjs'], { cwd: root, stdio: 'ignore' });
 }
