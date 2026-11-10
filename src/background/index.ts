@@ -13,7 +13,7 @@ import { formatDuration, hostMatches, hostOf, uid } from '../shared/util';
 import { engine, hasOffscreen, onEngineEvent, usesOffscreen } from './engine-client';
 import { clearHeaderRule, pruneHeaderRules, ruleId, setHeaderRule, setYoutubeUaRule } from './rules';
 import { postKey, vimeo, youtube, youtubePlayerRequest, YT_IOS, type SiteMedia } from '../shared/sites';
-import { applyUpdate, checkForUpdate, scheduleUpdates, updateState } from './update';
+import { applyUpdate, checkForUpdate, hasYtdlp, scheduleUpdates, updateState } from './update';
 import { cancelYtdlp, startYtdlp } from './ytdlp';
 
 // ------------------------------------------------------------------ state
@@ -277,8 +277,6 @@ async function smartName(item: MediaItem): Promise<string | undefined> {
 async function enqueue(item: MediaItem, options: Job['options']) {
   const host = hostOf(item.pageUrl || item.url);
   if (settings.audioOnlySites.some((s) => hostMatches(host, s))) options.audioOnly = true;
-  // YouTube's CDN rejects our own requests more and more (HTTP 403); yt-dlp keeps up with it. Turbo stays explicit.
-  if (item.site === 'youtube' && !options.turbo && (await updateState()).ytdlp) options.ytdlp = true;
   const variant = item.variants?.find((v) => v.id === options.variantId);
   const job: Job = {
     id: uid(),
@@ -349,6 +347,9 @@ setInterval(() => {
 }, 15_000);
 
 async function startJob(j: Job) {
+  // YouTube's CDN rejects our own requests (HTTP 403); yt-dlp keeps up with it. Decided here so Retry of an
+  // older job switches too. Turbo stays explicit.
+  if (j.media.site === 'youtube' && !j.options.turbo && !j.options.ytdlp && (await hasYtdlp())) j.options.ytdlp = true;
   if (j.options.ytdlp) return startYtdlpJob(j);
   if (isTurbo(j)) return startTurbo(j);
   if (j.media.kind === 'mse') return startMse(j);

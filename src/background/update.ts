@@ -47,6 +47,15 @@ export async function checkForUpdate(): Promise<UpdateState> {
   return s;
 }
 
+/** The Windows host can run yt-dlp. Asks it when not known yet: the periodic check may not have run since setup. */
+export async function hasYtdlp(): Promise<boolean> {
+  const s = await load();
+  if (s.ytdlp) return true;
+  const ping = await native<{ ok: boolean; ytdlp?: boolean }>({ op: 'ping' });
+  if (ping?.ytdlp) await save({ ...s, native: true, ytdlp: true });
+  return !!ping?.ytdlp;
+}
+
 /** Lets the Windows updater replace the extension files, then reloads into the new version. */
 export async function applyUpdate(): Promise<UpdateState> {
   const s = await load();
