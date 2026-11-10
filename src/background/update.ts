@@ -39,8 +39,9 @@ export async function checkForUpdate(): Promise<UpdateState> {
     s.error = e instanceof Error ? e.message : String(e);
   }
   s.checkedAt = Date.now();
-  const ping = await native<{ ok: boolean; ytdlp?: boolean }>({ op: 'ping' });
+  const ping = await native<{ ok: boolean; version?: string; ytdlp?: boolean }>({ op: 'ping' });
   s.native = !!ping?.ok;
+  s.hostVersion = ping?.version;
   s.ytdlp = !!ping?.ytdlp;
   s.installing = false;
   await save(s);
@@ -74,11 +75,17 @@ export async function applyUpdate(): Promise<UpdateState> {
 /** Periodic check; `auto` applies the update when nothing is downloading. */
 export function scheduleUpdates(auto: () => boolean, onChange: () => void) {
   if (!UPDATE_BASE) return;
-  void chrome.alarms.create('update-check', { delayInMinutes: 1, periodInMinutes: CHECK_EVERY_MIN });
+  // create() replaces an alarm of the same name: arming it on every worker start would run the check a minute
+  // after each start (and the alarm itself starts the worker) instead of every 6 hours.
+  void chrome.alarms.get('update-check').then((a) => {
+    if (!a) void chrome.alarms.create('update-check', { delayInMinutes: 1, periodInMinutes: CHECK_EVERY_MIN });
+  });
   chrome.alarms.onAlarm.addListener(async (a) => {
     if (a.name !== 'update-check') return;
     const s = await checkForUpdate();
     onChange();
-    if (s.latest && s.native && auto()) await applyUpdate();
+    // The host updates its own folder. A browser that loads another copy (same fixed ID) would reload into the
+    // old version and update again, forever: only auto-apply when the host's copy is the one running.
+    if (s.latest && s.native && s.hostVersion === current && auto()) await applyUpdate();
   });
 }

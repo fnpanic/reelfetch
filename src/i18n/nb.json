@@ -170,5 +170,9 @@
   "update_manual_hint": "Last ned det nye installasjonsprogrammet og kjør det for å oppdatere.",
   "turbo_partial": "Delvis: nettstedet stoppet avspillingen, lagret",
   "time_left": "$1 igjen",
-  "same_name_more": "$1 til med samme navn"
+  "same_name_more": "$1 til med samme navn",
+  "err_media_gone": "Dette mediet er ikke lenger tilgjengelig. Last inn siden på nytt.",
+  "err_page_load": "Siden ble ikke ferdig lastet.",
+  "picker_hint": "Klikk på elementet som inneholder videotittelen (Esc for å avbryte)",
+  "picker_use": "klikk for å bruke som filnavn"
 }

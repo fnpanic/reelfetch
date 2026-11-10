@@ -3,6 +3,47 @@
 All notable changes to ReelFetch. Versions follow [semantic versioning](https://semver.org/); dates are release
 dates. Releases are published to the update server with `npm run release:deploy` (see README → Publishing a release).
 
+## 1.5.0 - 2026-11-10
+
+Result of a full code, UI and security review. **Run the new Windows setup once**: the updater itself is only
+replaced by a setup, and signed updates, the yt-dlp fixes and the uninstall fix live there.
+
+### Security
+- **A web page could make ReelFetch request any address with your cookies.** Stream URLs that a page merely
+  reports (player data, Open Graph / JSON-LD tags) were analyzed at once. They are now fetched only when the page
+  requests the stream itself or you point at the item; site-extractor reports are accepted only from the sites that
+  have an extractor.
+- **Signed updates.** A release carries an RSA signature; the Windows updater checks it against a pinned public key
+  and refuses unsigned or older releases. Until now the update server alone decided what got installed.
+- **Hostile DASH manifests** (zero segment duration, billions of repeats, gigabyte-wide number padding) hung the
+  download engine. They are rejected.
+- The offscreen engine and the engine-event channel no longer accept messages from content scripts.
+- A tab keeps at most 500 media items and 20 inline manifests, so a page cannot exhaust the extension's storage.
+
+### Fixed
+- **The update check ran about every minute** instead of every 6 hours (the alarm was re-armed on every
+  service-worker start), each time starting PowerShell for the updater ping.
+- **Live recordings were deleted** when the stream paused for two minutes. A quiet stream is now saved as far as it
+  got.
+- **Large single-file DASH videos** (Facebook, Instagram) failed as "stalled": the file was read into memory in one
+  piece without progress. They are streamed to disk like plain files.
+- **Reddit / RedGifs videos went missing** after the service worker had restarted.
+- Auto-update could reload forever when the browser loads the extension from a folder other than the installed
+  one.
+- One invalid entry in **capture sites** (for example a full `https://` address) disabled capture for all sites.
+- A turbo capture cut short by closing the browser left the recorder active on that site.
+- Settings changed in the background (capture toggle, picked title) were overwritten by an open sidebar.
+- Windows: uninstall left the ~200 MB `tools` folder behind; a failed `yt-dlp -U` broke every yt-dlp download; a
+  half-downloaded `yt-dlp.exe` was kept forever.
+- CI ran on a branch that does not exist (`main`); it now runs on `master`, and only the tag build may write.
+
+### Changed
+- Light theme: darker accent red, so button and link text meets WCAG AA contrast.
+- The ⋮ menu closes with Esc and when the focus leaves it.
+- Finished yt-dlp downloads get a **Show download folder** button.
+- The title picker and several error messages are translated.
+- `release:deploy` runs typecheck and tests first and uses a pinned wrangler version.
+
 ## 1.4.2 - 2026-11-10
 
 ### Changed

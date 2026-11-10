@@ -30,6 +30,7 @@ export type UiRequest =
   | { type: 'clear-history' }
   | { type: 'remove-history'; id: string }
   | { type: 'reload-tab'; tabId: number; clearCookies?: boolean }
+  | { type: 'analyze'; mediaId: string }
   | { type: 'preview'; mediaId: string }
   | { type: 'default-action'; mediaId: string; variantId?: string }
   | { type: 'turbo'; mediaId?: string; tabId: number }

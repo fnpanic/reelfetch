@@ -10,6 +10,9 @@ list, and how to diagnose the problems that are most often reported.
    Each find becomes an item in the popup. Items with the same name are folded into one row showing the most
    likely one (no DRM or error, then HLS/DASH, then longest, then largest); the rest open with
    **N more with the same name**. The toolbar badge counts these rows, not the streams behind them.
+   A stream URL that only the page reported (not one the page actually requested) is not fetched until you point
+   at its row: a page could otherwise make ReelFetch request any address with your cookies. A tab keeps at most
+   500 items; the oldest are dropped.
 2. **Naming** - the file name comes from the filename template (Settings). `{title}` is, in order of precedence:
    the text picked by a smart-naming rule for the site, the post title on feed pages (Reddit, including RedGifs
    embeds), the site extractor's title, and finally the tab title.
@@ -24,7 +27,7 @@ list, and how to diagnose the problems that are most often reported.
    - **YouTube with yt-dlp** (Windows setup 1.4.0+): YouTube's CDN answers ReelFetch's own requests more and more
      often with `HTTP 403`, so YouTube jobs go to [yt-dlp](https://github.com/yt-dlp/yt-dlp) through the Windows
      native host instead. On the first such download the host fetches `yt-dlp.exe`, Deno (YouTube's JS challenges)
-     and, unless `ffmpeg` is on the PATH, ffmpeg (about 200 MB) into `%LOCALAPPDATA%\ReelFetch	ools`, each checked
+     and, unless `ffmpeg` is on the PATH, ffmpeg (about 200 MB) into `%LOCALAPPDATA%\ReelFetch\tools`, each checked
      against its release's SHA-256; yt-dlp updates itself daily. The file is written straight to the Windows
      Downloads folder (plus the filename template's sub-folder), so it does not appear in the browser's download
      list. Any other item can be sent to yt-dlp with ⋮ → **Download with yt-dlp**. Canceling kills yt-dlp and
@@ -48,9 +51,15 @@ list, and how to diagnose the problems that are most often reported.
 | "The connection dropped and this server cannot resume downloads" | The connection broke mid-file and the server ignores `Range` requests, so the file can't be continued. | **Retry** starts the file from the beginning. |
 | **HTTP 403** on a YouTube video (`googlevideo.com`) | YouTube rejected ReelFetch's direct stream requests. | Install the Windows setup 1.4.0+: YouTube then downloads with yt-dlp automatically. |
 | ReelFetch can't save it at all | Unsupported site or stream. | ⋮ → **Download with yt-dlp** (Windows setup 1.4.0+), or **Copy yt-dlp command** and run it in a terminal ([yt-dlp](https://github.com/yt-dlp/yt-dlp)). |
+| Update fails with "not signed by the ReelFetch publisher" | The update server offered a release without a valid signature. | Do not install it from elsewhere; report it. A release made with a new signing key needs the new setup. |
+| Capture or Turbo stopped working after editing **capture sites** | Before 1.5.0 one entry that was no host name (e.g. a full `https://…` address) disabled capture for every site. | Update to 1.5.0 or later: entries are reduced to host names, invalid ones are dropped. |
 | "DRM-protected" | Widevine/PlayReady/FairPlay or HLS `SAMPLE-AES`. | Not supported by design. |
 
 ## Updates and running downloads
+
+Updates are signed by the publisher (Windows setup 1.5.0+); the updater refuses a release whose signature does not
+match the key built into it, and one that is older than the installed version. A live recording whose stream lists
+nothing new for two minutes is saved as far as it got.
 
 The extension checks the update server periodically. With automatic updates on, an update is installed **only
 while no download is running or queued**, so a release never interrupts downloads in progress.

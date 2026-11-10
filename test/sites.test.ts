@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { bilibili, facebook, genericMeta, okru, postKey, vimeo, vk, youtube, youtubePlayerRequest } from '../src/shared/sites';
+import { bilibili, EXTRACTOR_HOSTS, facebook, genericMeta, okru, postKey, vimeo, vk, youtube, youtubePlayerRequest } from '../src/shared/sites';
+
+// Only pages of these hosts may report site media: any page script can post the message the extractor posts.
+describe('extractor hosts', () => {
+  it('matches the supported sites and nothing that merely looks like them', () => {
+    for (const h of ['www.youtube.com', 'youtube-nocookie.com', 'm.bilibili.tv', 'player.vimeo.com', 'ok.ru', 'vk.ru', 'vkvideo.ru', 'www.facebook.com', 'instagram.com'])
+      expect(EXTRACTOR_HOSTS.test(h), h).toBe(true);
+    for (const h of ['evil.example', 'notyoutube.com', 'youtube.com.evil.example', 'vimeo.com.evil.example']) expect(EXTRACTOR_HOSTS.test(h), h).toBe(false);
+  });
+});
 
 const ytBase = {
   playabilityStatus: { status: 'OK' },

@@ -212,12 +212,18 @@ async function planDash(job: Job, s: EngineSettings, signal: AbortSignal): Promi
   const pick = (type: DashRep['contentType']) => reps.filter((x) => x.contentType === type);
   const audioOnly = !!job.options.audioOnly;
   const tracks: Track[] = [];
+  // A representation that is one plain file (BaseURL only) is streamed to disk like a direct download; as a single
+  // "segment" it would sit in memory whole and report no progress until it is complete.
+  const vod = (name: Track['name'], rep: DashRep, lang?: string): Track => {
+    const segs = joinPeriods(m, rep);
+    return segs.length === 1 && !segs[0].byteRange && !segs[0].map ? { name, url: segs[0].url, lang } : { name, segments: segs, lang };
+  };
 
   const videos = pick('video');
   if (!audioOnly && videos.length) {
     const v = videos.find((x) => x.id === job.options.variantId) ?? pickVariant(videos, s.preferredQuality)!;
     if (v.drm) throw new DrmError();
-    tracks.push(m.live ? dashLive(r.url, v, 'video') : { name: 'video', segments: joinPeriods(m, v) });
+    tracks.push(m.live ? dashLive(r.url, v, 'video') : vod('video', v));
   }
   const audios = pick('audio');
   if (audios.length) {
@@ -226,12 +232,12 @@ async function planDash(job: Job, s: EngineSettings, signal: AbortSignal): Promi
       .filter((a) => a.lang === lang)
       .sort((a, b) => (b.bandwidth ?? 0) - (a.bandwidth ?? 0))[0];
     if (best.drm) throw new DrmError();
-    tracks.push(m.live ? { ...dashLive(r.url, best, 'audio'), lang } : { name: 'audio', segments: joinPeriods(m, best), lang });
+    tracks.push(m.live ? { ...dashLive(r.url, best, 'audio'), lang } : vod('audio', best, lang));
   }
   const texts = pick('text');
   if (s.downloadSubtitles && texts.length && !audioOnly && !m.live) {
     const t = s.subtitleLangs.length ? pickByLang(texts, s.subtitleLangs)! : texts[0];
-    tracks.push({ name: 'subs', segments: joinPeriods(m, t), lang: t.lang });
+    tracks.push(vod('subs', t, t.lang));
   }
   if (!tracks.length) throw new Error('No downloadable representation found');
   return tracks;
@@ -314,14 +320,19 @@ async function downloadSegments(
   }
 }
 
+/** A live stream that lists nothing new for this long has ended without saying so: save what was recorded. */
+const LIVE_IDLE_MS = 120_000;
+
 async function recordLive(t: Track, spool: Spool, ctl: Control, c: Counter, report: () => void, isVideo: boolean) {
   const seen = new Set<string>();
   const segKey = (x: Segment) => `${x.url}#${x.byteRange?.offset ?? ''}`;
   const state = { mapKey: '' };
   const hosts = new Set<string>();
   let first = true;
+  let lastFresh = Date.now();
   while (!ctl.stopped()) {
     let poll: LivePoll;
+    report(); // still alive while the stream pauses: the background fails jobs that go silent
     try {
       poll = await t.poll!(ctl.signal);
       let fresh = poll.segments.filter((x) => !seen.has(segKey(x)));
@@ -330,7 +341,9 @@ async function recordLive(t: Track, spool: Spool, ctl: Control, c: Counter, repo
         fresh = fresh.slice(-t.startWindow);
       }
       first = false;
+      if (!fresh.length && Date.now() - lastFresh > LIVE_IDLE_MS) break;
       if (fresh.length) {
+        lastFresh = Date.now();
         // Segments may move to new CDN hosts mid-stream; they need the Referer rule too.
         const added = fresh
           .flatMap((x) => [x.url, x.map?.url, x.key?.uri])

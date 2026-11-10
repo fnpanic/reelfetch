@@ -1,7 +1,7 @@
 # ReelFetch updater: Chrome/Edge/Brave native messaging host installed by the Windows setup.
 # Protocol: 4-byte little-endian length + UTF-8 JSON, one request per launch.
 #   {op:"ping"}   -> {ok:true, version}
-#   {op:"update"} -> downloads <base>/latest.json + the zip it names, verifies SHA-256, swaps the files.
+#   {op:"update"} -> downloads <base>/latest.json + the zip it names, verifies signature and SHA-256, swaps the files.
 #   {op:"ytdlp"}  -> downloads one video with yt-dlp, streaming progress (see Invoke-Ytdlp; needs connectNative).
 # The download source is fixed in config.json (written by the setup); the extension cannot redirect it.
 $ErrorActionPreference = 'Stop'
@@ -31,10 +31,28 @@ function Get-InstalledVersion($dir) {
   (Get-Content -Raw -Path (Join-Path $dir 'manifest.json') | ConvertFrom-Json).version
 }
 
+# Public half of the release signing key (the private half never leaves the publisher's PC; scripts/sign.mjs).
+# The update server only stores files: without this check, whoever controls it could ship any code.
+$UpdateKey = '<RSAKeyValue><Modulus>yQspfAnUcPwFagXAY1ouHjXZuHUszTsbIDXL+F87bvSUOeE/fjmD7u26XAdBofXpOZldWlxj9M/f4nfA6w7TNBXBR87naumyd/41H3LSA4f/19RXtxxcfy1/QS5ykF4Ig5yhOfVnBjRZi6pkZrmZHj8c2cpdZ8oXNzN/SFvCPT1ZD+Xcm15wOXl46TnyB2DG9i6Cshe7v52C9dutX6xSiqOZHslsARXHYgbZ7Q2Q+p7CFjyqD0mqN789Grq6HLpLy0cZ+yTJxaXKSMNv/WO0tTXYeA/uMipRYwBDbh9TW+1BuUmTgI8RivXFHxvLmnJK8zHRIhokV/gx5UpRaZMcMM7Cbbu8LIh4InqwyDmMrVrW3Om8itFuRQ2Az1xHshpWp8jQGHEUStidHfDQFAL9v8XgVxoT3KSTKKsp6Nq3X7wYpyLJqldPICQuKHE+RvzmoXeOVemoFE6cPU/lHdioUNwU5l68S4xLoVqumON2g42nTc3f2XT6/sRW9+GA7o/5</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>'
+
+# The signature (RSA PKCS#1 v1.5, SHA-256) covers "<version>`n<sha256 in lower case>".
+function Test-Signature($rel) {
+  if ([string]$rel.sig -notmatch '^[A-Za-z0-9+/]+=*$') { return $false }
+  $rsa = New-Object Security.Cryptography.RSACryptoServiceProvider
+  $rsa.FromXmlString($UpdateKey)
+  $data = [Text.Encoding]::UTF8.GetBytes("$($rel.version)`n$($rel.sha256.ToLower())")
+  return $rsa.VerifyData($data, [Convert]::FromBase64String($rel.sig), [Security.Cryptography.HashAlgorithmName]::SHA256, [Security.Cryptography.RSASignaturePadding]::Pkcs1)
+}
+
 function Update-Extension($cfg) {
   $base = $cfg.base.TrimEnd('/')
   $rel = Invoke-RestMethod -UseBasicParsing -Uri "$base/latest.json" -Headers @{ 'Cache-Control' = 'no-cache' }
-  if ($rel.zip -notmatch '^[\w.\-]+$' -or $rel.sha256 -notmatch '^[0-9a-fA-F]{64}$') { throw 'Invalid release data' }
+  if ($rel.version -notmatch '^\d+(\.\d+){0,3}$' -or $rel.zip -notmatch '^[\w.\-]+$' -or $rel.sha256 -notmatch '^[0-9a-fA-F]{64}$') { throw 'Invalid release data' }
+  if (-not (Test-Signature $rel)) { throw 'Update rejected: it is not signed by the ReelFetch publisher' }
+  $installed = Get-InstalledVersion $cfg.extensionDir
+  if ([version]$rel.version -lt [version]$installed) { throw 'Update rejected: it is older than the installed version' }
+  # Files already current (the setup ran, or the browser loads another copy): nothing to swap, the extension just reloads.
+  if ([version]$rel.version -eq [version]$installed) { return $installed }
   $tmp = Join-Path ([IO.Path]::GetTempPath()) ("reelfetch-" + [Guid]::NewGuid())
   New-Item -ItemType Directory -Path $tmp | Out-Null
   try {
@@ -63,8 +81,12 @@ function Get-Checked($url, $sumsUrl, $name, $out) {
   if (-not $line) { $line = $sums } # deno: one file per hash
   if ($line -notmatch '([0-9a-fA-F]{64})') { throw "No checksum for $name" }
   $want = $Matches[1].ToUpper()
-  Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $out
-  if ((Get-FileHash -Algorithm SHA256 -Path $out).Hash -ne $want) { Remove-Item -Force $out; throw "Checksum mismatch: $name" }
+  # Download beside the target and move it there once checked: a dropped connection or a second job starting
+  # at the same time must never leave a partial or unchecked file at the final path.
+  $tmp = "$out.$PID.tmp"
+  Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $tmp
+  if ((Get-FileHash -Algorithm SHA256 -Path $tmp).Hash -ne $want) { Remove-Item -Force $tmp; throw "Checksum mismatch: $name" }
+  Move-Item -Force -Path $tmp -Destination $out
 }
 
 function Get-Zipped($url, $sumsUrl, $name, [string[]]$exes) {
@@ -87,7 +109,8 @@ function Install-Tools {
     Get-Checked "$gh/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe" "$gh/yt-dlp/yt-dlp/releases/latest/download/SHA2-256SUMS" 'yt-dlp.exe' $exe
   } elseif ((Get-Item $exe).LastWriteTime -lt (Get-Date).AddDays(-1)) {
     # YouTube changes often; yt-dlp verifies its own update.
-    & $exe -U 2>&1 | Out-Null
+    # With 'Stop', a line on stderr (GitHub unreachable, ...) would end the whole download: a failed self-update is fine.
+    & { $ErrorActionPreference = 'Continue'; & $exe -U 2>&1 | Out-Null }
     (Get-Item $exe).LastWriteTime = Get-Date
   }
   if (-not (Test-Path (Join-Path $Tools 'deno.exe')) -and -not (Get-Command deno -ErrorAction SilentlyContinue)) {
@@ -158,7 +181,7 @@ function Invoke-Ytdlp($msg) {
   while ($open -gt 0) {
     $i = [Threading.Tasks.Task]::WaitAny(@($reads[0], $reads[1], $stdin), 1000)
     if ($stdin.IsCompleted) {
-      & taskkill /PID $p.Id /T /F 2>&1 | Out-Null
+      & { $ErrorActionPreference = 'Continue'; & taskkill /PID $p.Id /T /F 2>&1 | Out-Null } # "not found" on stderr must not skip the cleanup
       $p.WaitForExit(5000) | Out-Null
       # Partial files of this job: <name>.part, <name>.f399.mp4.part, .ytdl state files.
       Get-ChildItem -LiteralPath (Split-Path $out) -Filter ((Split-Path -Leaf $out) -replace '%\(ext\)s$', '*') -ErrorAction SilentlyContinue |

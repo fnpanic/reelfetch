@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { t } from '../../shared/i18n';
 import { resetSettings, type Settings } from '../../shared/settings';
+import { siteHost } from '../../shared/util';
 import { send } from '../hooks';
 import { Icon } from '../Icon';
 import { UPDATE_BASE, type UpdateState } from '../../shared/update';
@@ -16,6 +17,9 @@ const list = (s: string) =>
     .split(/[\s,]+/)
     .map((x) => x.trim())
     .filter(Boolean);
+
+/** Site lists hold bare host names: "https://example.com/x" becomes "example.com", anything else is dropped. */
+const sites = (s: string) => [...new Set(list(s).map(siteHost).filter(Boolean))];
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -83,6 +87,7 @@ function Text({
   multiline?: boolean;
 }) {
   const [v, setV] = useState(value);
+  useEffect(() => setV(value), [value]); // the value can change from outside (background, reset, normalized entry)
   const props = {
     value: v,
     placeholder,
@@ -260,8 +265,8 @@ export function SettingsView({ settings: s, update, updateState }: Props & { upd
       <Section title={t('behavior_title')}>
         <Check label={t('show_in_context_menu')} k="contextMenu" s={s} update={update} />
         <Select label={t('media_discovered_ordering_title')} k="mediaOrder" s={s} update={update} options={[['smart', t('order_media_smart')], ['newest', t('order_media_by_newest')], ['oldest', t('order_media_by_oldest')]]} />
-        <Text label={t('audio_only_sites')} value={s.audioOnlySites.join('\n')} multiline placeholder="music.example.com" onCommit={(v) => update({ audioOnlySites: list(v) })} />
-        <Text label={t('capture_sites')} value={s.captureSites.join('\n')} multiline placeholder="video.example.com" onCommit={(v) => update({ captureSites: list(v) })} />
+        <Text label={t('audio_only_sites')} value={s.audioOnlySites.join('\n')} multiline placeholder="music.example.com" onCommit={(v) => update({ audioOnlySites: sites(v) })} />
+        <Text label={t('capture_sites')} value={s.captureSites.join('\n')} multiline placeholder="video.example.com" onCommit={(v) => update({ captureSites: sites(v) })} />
       </Section>
 
       <Section title={t('smart_naming_title')}>

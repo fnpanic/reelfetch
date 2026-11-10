@@ -170,5 +170,9 @@
   "update_manual_hint": "Descarga el nuevo instalador y ejecútalo para actualizar.",
   "turbo_partial": "Parcial: el sitio detuvo la reproducción, guardado",
   "time_left": "quedan $1",
-  "same_name_more": "$1 más con el mismo nombre"
+  "same_name_more": "$1 más con el mismo nombre",
+  "err_media_gone": "Este contenido ya no está disponible. Vuelve a cargar la página.",
+  "err_page_load": "La página no terminó de cargarse.",
+  "picker_hint": "Haz clic en el elemento que contiene el título del vídeo (Esc para cancelar)",
+  "picker_use": "haz clic para usarlo como nombre de archivo"
 }

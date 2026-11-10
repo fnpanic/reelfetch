@@ -170,5 +170,9 @@
   "update_manual_hint": "Download de nieuwe installer en voer die uit om bij te werken.",
   "turbo_partial": "Gedeeltelijk: de site stopte het afspelen, opgeslagen",
   "time_left": "nog $1",
-  "same_name_more": "Nog $1 met dezelfde naam"
+  "same_name_more": "Nog $1 met dezelfde naam",
+  "err_media_gone": "Deze media is niet meer beschikbaar. Laad de pagina opnieuw.",
+  "err_page_load": "De pagina is niet volledig geladen.",
+  "picker_hint": "Klik op het element dat de videotitel bevat (Esc om te annuleren)",
+  "picker_use": "klik om als bestandsnaam te gebruiken"
 }

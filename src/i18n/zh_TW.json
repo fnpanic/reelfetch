@@ -170,5 +170,9 @@
   "update_manual_hint": "下載並執行新的安裝程式以更新。",
   "turbo_partial": "不完整：網站停止了播放，已儲存",
   "time_left": "剩餘 $1",
-  "same_name_more": "另有 $1 個同名項目"
+  "same_name_more": "另有 $1 個同名項目",
+  "err_media_gone": "此媒體已無法使用。請重新載入頁面。",
+  "err_page_load": "頁面未載入完成。",
+  "picker_hint": "點擊包含影片標題的元素（按 Esc 取消）",
+  "picker_use": "點擊以用作檔名"
 }

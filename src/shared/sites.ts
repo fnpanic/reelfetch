@@ -47,6 +47,9 @@ function dedupeHeights(vs: SiteVariant[]): SiteVariant[] {
   return vs.sort(byQuality).filter((v) => !seen.has(v.height) && seen.add(v.height));
 }
 
+/** Hosts that have a page-world extractor (content/extract.ts); only their pages may report site media. */
+export const EXTRACTOR_HOSTS = /(^|\.)(youtube(-nocookie)?\.com|bilibili\.(com|tv)|vimeo\.com|ok\.ru|vk\.(com|ru)|vkvideo\.ru|facebook\.com|instagram\.com)$/;
+
 // ------------------------------------------------------------------ YouTube
 
 /**

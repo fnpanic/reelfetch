@@ -7,6 +7,7 @@ import { execFileSync } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
+import { signRelease } from './sign.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
@@ -16,6 +17,10 @@ if (!updateUrl || !cloudflareWorker) throw new Error('package.json needs reelfet
 const v = pkg.version;
 const out = join(root, 'release');
 const run = (cmd, args, opts = {}) => execFileSync(cmd, args, { stdio: 'inherit', cwd: root, ...opts });
+const deploy = process.argv.includes('--deploy');
+
+// A published release installs itself on every PC within hours: never publish one that fails its checks.
+if (deploy) execFileSync('npm run typecheck && npm test', { stdio: 'inherit', cwd: root, shell: true });
 
 run(process.execPath, ['scripts/build.mjs'], { env: { ...process.env, REELFETCH_UPDATE_URL: updateUrl } });
 const { extensionId } = JSON.parse(readFileSync(join(root, 'dist', 'build.json'), 'utf8'));
@@ -50,8 +55,8 @@ const setup = `ReelFetch-Setup-${v}.exe`;
 copyFileSync(join(root, 'dist', zip), join(out, zip));
 copyFileSync(join(root, 'dist', `reelfetch-firefox-${v}.zip`), join(out, `reelfetch-firefox-${v}.zip`));
 const sha256 = createHash('sha256').update(readFileSync(join(out, zip))).digest('hex');
-const notes = process.env.RELEASE_NOTES ?? '';
-writeFileSync(join(out, 'latest.json'), JSON.stringify({ version: v, zip, sha256, setup, notes }, null, 2));
+// The updater only installs what carries this signature (see installer/updater.ps1).
+writeFileSync(join(out, 'latest.json'), JSON.stringify({ version: v, zip, sha256, sig: signRelease(v, sha256), setup }, null, 2));
 // latest.json must never be cached, or clients would miss releases.
 writeFileSync(join(out, '_headers'), '/latest.json\n  Cache-Control: no-store\n  Access-Control-Allow-Origin: *\n');
 writeFileSync(
@@ -59,7 +64,7 @@ writeFileSync(
   `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ReelFetch ${v}</title>
 <style>body{font:16px/1.5 system-ui,sans-serif;max-width:560px;margin:48px auto;padding:0 16px;color:#1c1b1a;background:#fbfaf8}
-a.btn{display:inline-block;background:#e5484d;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600}
+a.btn{display:inline-block;background:#cf3a40;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600}
 @media (prefers-color-scheme:dark){body{color:#ecebe8;background:#161514}a{color:#ff6369}}</style>
 <h1>ReelFetch ${v}</h1>
 <p><a class="btn" href="${setup}">Download for Windows</a></p>
@@ -69,9 +74,9 @@ a.btn{display:inline-block;background:#e5484d;color:#fff;padding:10px 18px;borde
 );
 console.log(`Release ${v} in release/ (extension id ${extensionId}).`);
 
-if (process.argv.includes('--deploy')) {
+if (deploy) {
   // One command string: npx is a .cmd on Windows and needs the shell.
-  execFileSync(`npx --yes wrangler@4 deploy --name ${cloudflareWorker} --assets release --compatibility-date 2026-10-01`, {
+  execFileSync(`npx --yes wrangler@4.160.0 deploy --name ${cloudflareWorker} --assets release --compatibility-date 2026-10-01`, {
     stdio: 'inherit',
     cwd: root,
     shell: true,

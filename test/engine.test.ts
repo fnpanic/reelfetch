@@ -268,6 +268,21 @@ describe('engine', () => {
     expect((await inspect(out.files[0].blob)).duration).toBeGreaterThan(5.5);
   });
 
+  it('streams single-file DASH representations instead of buffering them as one segment', async () => {
+    const text = `<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" type="static" mediaPresentationDuration="PT10S"><Period>
+      <AdaptationSet contentType="video" mimeType="video/mp4"><Representation id="v" bandwidth="1" height="180"><BaseURL>${base}/site-video.mp4</BaseURL></Representation></AdaptationSet>
+      <AdaptationSet contentType="audio" mimeType="audio/mp4"><Representation id="a" bandwidth="1"><BaseURL>${base}/site-audio.m4a</BaseURL></Representation></AdaptationSet>
+    </Period></MPD>`;
+    const m: MediaItem = { ...media('dash', 'x'), url: 'about:reelfetch-2', manifest: text };
+    const progress: (number | undefined)[] = [];
+    const out = await download(job(m), settings, { ...ctl(), onProgress: (p) => progress.push(p.total) });
+    // A known total means the files went through the streaming downloader (progress while they load).
+    expect(progress.at(-1)).toBe(83153 + 482781);
+    const info = await inspect(out.files[0].blob);
+    expect(info).toMatchObject({ video: ['avc'], audio: ['aac'] });
+    expect(info.duration).toBeGreaterThan(9.5);
+  });
+
   it('builds short previews', async () => {
     const out = await download(job(media('hls', 'hls-fmp4/master.m3u8')), settings, { ...ctl(), previewSeconds: 2 });
     const info = await inspect(out.files[0].blob);

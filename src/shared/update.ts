@@ -6,7 +6,6 @@ export const UPDATER_HOST = 'app.reelfetch.updater';
 
 export interface Release {
   version: string;
-  notes?: string;
   /** Windows setup, relative to UPDATE_BASE. */
   setup?: string;
   zip?: string;
@@ -20,6 +19,8 @@ export interface UpdateState {
   error?: string;
   /** The Windows updater is installed, so the update can be applied in place. */
   native: boolean;
+  /** Version of the copy the updater manages; differs from `current` when the browser loads another folder. */
+  hostVersion?: string;
   installing?: boolean;
   /** The installed host can download with yt-dlp (setup 1.4.0+). */
   ytdlp?: boolean;
@@ -42,7 +43,6 @@ export function parseRelease(json: unknown): Release | null {
   const rel = (p: unknown) => (typeof p === 'string' && /^[\w.\-]+$/.test(p) ? p : undefined);
   return {
     version: r.version,
-    notes: typeof r.notes === 'string' ? r.notes.slice(0, 500) : undefined,
     setup: rel(r.setup),
     zip: rel(r.zip),
     sha256: typeof r.sha256 === 'string' && /^[0-9a-f]{64}$/i.test(r.sha256) ? r.sha256.toLowerCase() : undefined,

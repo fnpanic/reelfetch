@@ -15,6 +15,7 @@ import { cpSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from 'no
 import { readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { signRelease } from './sign.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const PORT = 8765;
@@ -55,7 +56,9 @@ writeFileSync(join(srv, 'pkg', 'manifest.json'), JSON.stringify({ ...manifest, v
 const zip = `reelfetch-chrome-${next}.zip`;
 ps(`Compress-Archive -Path '${join(srv, 'pkg')}\\*' -DestinationPath '${join(srv, zip)}'`);
 const sha256 = createHash('sha256').update(readFileSync(join(srv, zip))).digest('hex');
-writeFileSync(join(srv, 'latest.json'), JSON.stringify({ version: next, zip, sha256, setup: `ReelFetch-Setup-${next}.exe` }));
+const latest = (extra) => writeFileSync(join(srv, 'latest.json'), JSON.stringify({ version: next, zip, sha256, setup: `ReelFetch-Setup-${next}.exe`, ...extra }));
+// First a release signed for other content (what a taken-over update server could offer): must be refused.
+latest({ sig: signRelease(next, 'f'.repeat(64)) });
 const server = createServer(async (req, res) => {
   try {
     res.end(await readFile(join(srv, new URL(req.url, base).pathname)));
@@ -100,6 +103,9 @@ try {
   await ui.evaluate(() => document.querySelector('main').scrollTo(0, 1e6));
   await ui.screenshot({ path: join(shots, 'reelfetch-update-settings.png') });
   await ui.click('button[role=tab]:nth-child(1)');
+  const refused = await ui.evaluate(() => chrome.runtime.sendMessage({ type: 'update-apply' }));
+  check(/not signed/.test(refused?.error ?? '') && version() === pkg.version, `update with a wrong signature is refused (${refused?.error})`);
+  latest({ sig: signRelease(next, sha256) });
   await ui.click('.banner.update button');
   for (let i = 0; i < 60 && version() !== next; i++) await sleep(500);
   check(version() === next, `in-place update installed ${version()}`);

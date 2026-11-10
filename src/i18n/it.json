@@ -170,5 +170,9 @@
   "update_manual_hint": "Scarica il nuovo programma di installazione ed eseguilo per aggiornare.",
   "turbo_partial": "Parziale: il sito ha interrotto la riproduzione, salvato",
   "time_left": "mancano $1",
-  "same_name_more": "Altri $1 con lo stesso nome"
+  "same_name_more": "Altri $1 con lo stesso nome",
+  "err_media_gone": "Questo contenuto non è più disponibile. Ricarica la pagina.",
+  "err_page_load": "La pagina non ha terminato il caricamento.",
+  "picker_hint": "Fai clic sull'elemento che contiene il titolo del video (Esc per annullare)",
+  "picker_use": "fai clic per usarlo come nome del file"
 }

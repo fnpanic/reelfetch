@@ -170,5 +170,9 @@
   "update_manual_hint": "Töltse le és futtassa az új telepítőt a frissítéshez.",
   "turbo_partial": "Részleges: a webhely leállította a lejátszást, mentve",
   "time_left": "még $1",
-  "same_name_more": "Még $1 azonos névvel"
+  "same_name_more": "Még $1 azonos névvel",
+  "err_media_gone": "Ez a média már nem érhető el. Töltse újra az oldalt.",
+  "err_page_load": "Az oldal nem töltődött be teljesen.",
+  "picker_hint": "Kattintson arra az elemre, amely a videó címét tartalmazza (Esc: mégse)",
+  "picker_use": "kattintson a fájlnévként való használathoz"
 }

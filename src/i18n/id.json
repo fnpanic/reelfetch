@@ -170,5 +170,9 @@
   "update_manual_hint": "Unduh penginstal baru dan jalankan untuk memperbarui.",
   "turbo_partial": "Sebagian: situs menghentikan pemutaran, disimpan",
   "time_left": "sisa $1",
-  "same_name_more": "$1 lainnya dengan nama yang sama"
+  "same_name_more": "$1 lainnya dengan nama yang sama",
+  "err_media_gone": "Media ini tidak tersedia lagi. Muat ulang halaman.",
+  "err_page_load": "Halaman tidak selesai dimuat.",
+  "picker_hint": "Klik elemen yang berisi judul video (Esc untuk membatalkan)",
+  "picker_use": "klik untuk dipakai sebagai nama berkas"
 }

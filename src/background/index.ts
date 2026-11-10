@@ -9,7 +9,7 @@ import { buildBasename, cleanTitle } from '../shared/naming';
 import { groupByTitle, mediaTitle, visibleMedia } from '../shared/quality';
 import { loadSettings, type Settings } from '../shared/settings';
 import type { HistoryEntry, Job, MediaItem, RequestHeaders, Variant } from '../shared/types';
-import { formatDuration, hostMatches, hostOf, uid } from '../shared/util';
+import { formatDuration, hostMatches, hostOf, siteHost, uid } from '../shared/util';
 import { engine, hasOffscreen, onEngineEvent, usesOffscreen } from './engine-client';
 import { clearHeaderRule, pruneHeaderRules, ruleId, setHeaderRule, setYoutubeUaRule } from './rules';
 import { postKey, vimeo, youtube, youtubePlayerRequest, YT_IOS, type SiteMedia } from '../shared/sites';
@@ -19,6 +19,8 @@ import { cancelYtdlp, startYtdlp } from './ytdlp';
 // ------------------------------------------------------------------ state
 
 const media = new Map<number, MediaItem[]>();
+/** A page must not grow a tab's list (and the session storage it is saved to) without bound: the oldest items go. */
+const MAX_MEDIA_PER_TAB = 500;
 const tabInfo = new Map<number, { thumbnail?: string; drm?: boolean; names?: Map<string, PostName> }>();
 
 /** Name a feed item after its own post (Reddit), not the page. */
@@ -42,7 +44,8 @@ const ready = (async () => {
   settings = await loadSettings();
   const s = await chrome.storage.session.get(['media', 'jobs', 'tabInfo']);
   for (const [k, v] of Object.entries((s.media ?? {}) as Record<string, MediaItem[]>)) media.set(Number(k), v);
-  for (const [k, v] of Object.entries((s.tabInfo ?? {}) as Record<string, { thumbnail?: string }>)) tabInfo.set(Number(k), v);
+  for (const [k, v] of Object.entries((s.tabInfo ?? {}) as Record<string, { thumbnail?: string; drm?: boolean; names?: [string, PostName][] }>))
+    tabInfo.set(Number(k), { ...v, names: Array.isArray(v.names) ? new Map(v.names) : undefined });
   jobs = (s.jobs ?? []) as Job[];
   // Engine jobs can only survive a background restart if the offscreen document survived.
   const engineAlive = usesOffscreen() && (await hasOffscreen());
@@ -69,7 +72,8 @@ function changed(tabId?: number) {
     void chrome.storage.session.set({
       media: Object.fromEntries(media),
       jobs,
-      tabInfo: Object.fromEntries(tabInfo),
+      // Storage keeps a Map as {}: save the post names as entries.
+      tabInfo: Object.fromEntries([...tabInfo].map(([k, v]) => [k, { ...v, names: v.names && [...v.names] }])),
     });
   }, 300);
   clearTimeout(notifyTimer);
@@ -191,7 +195,7 @@ async function addMedia(
   };
   item.headers.referer ??= tab.url;
   applyPostName(item);
-  media.set(tabId, [...(media.get(tabId) ?? []), item]);
+  media.set(tabId, [...(media.get(tabId) ?? []), item].slice(-MAX_MEDIA_PER_TAB));
   changed(tabId);
   if (autoAnalyze && (kind === 'hls' || kind === 'dash')) void analyzeItem(item);
   return item;
@@ -387,7 +391,7 @@ function waitForLoad(tabId: number, timeout = 45000): Promise<void> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       chrome.webNavigation.onCompleted.removeListener(on);
-      reject(new Error('Page did not load'));
+      reject(new Error(t('err_page_load')));
     }, timeout);
     function on(d: { tabId: number; frameId: number }) {
       if (d.tabId !== tabId || d.frameId !== 0) return;
@@ -482,7 +486,7 @@ async function startMse(j: Job, frameOverride?: number, msOverride?: string) {
     { frameId },
   );
   if (j.status !== 'running') return;
-  if (!res?.ok) throw new Error(res?.error ?? 'Capture failed');
+  if (!res?.ok) throw new Error(res?.error ?? t('download_failed'));
   j.filename = res.filename;
   await finish(j, res.size);
 }
@@ -551,7 +555,7 @@ chrome.downloads.onChanged.addListener((delta) => {
     if (delta.state?.current === 'interrupted') {
       const [d] = await chrome.downloads.search({ id: delta.id });
       if (d?.error === 'USER_CANCELED') await cancel(j);
-      else await fail(j, d?.error ?? 'Download interrupted');
+      else await fail(j, d?.error ?? t('download_failed'));
       return;
     }
     if (delta.state?.current !== 'complete') return;
@@ -656,6 +660,8 @@ function addHistory(e: HistoryEntry): Promise<void> {
 // ------------------------------------------------------------------ MSE capture
 
 async function setCaptureScripts(sites: string[]) {
+  // One entry that is no host name would make the whole registration fail, for every site.
+  sites = sites.map(siteHost).filter(Boolean);
   await chrome.scripting.unregisterContentScripts({ ids: ['mse-hook'] }).catch(() => {});
   if (!sites.length) return;
   await chrome.scripting.registerContentScripts([
@@ -686,7 +692,8 @@ async function toggleCapture(tabId: number, enable: boolean) {
 // ------------------------------------------------------------------ messages
 
 chrome.runtime.onMessage.addListener((msg, sender, reply) => {
-  if (msg?.type === 'engine-event') {
+  // Engine events come from the offscreen document; a content script (sender.tab) must not forge them.
+  if (msg?.type === 'engine-event' && !sender.tab) {
     onEngine(msg.event as EngineEvent).then(reply, () => reply(undefined));
     return true;
   }
@@ -703,7 +710,12 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
   return true;
 });
 
-async function addSiteMedia(tabId: number, frameId: number, items: unknown[]) {
+/**
+ * `trusted` is true only for items the extension fetched itself (Vimeo config, YouTube API). Anything else was
+ * reported by the page, which can put any URL there: those streams are analyzed when the page requests them itself
+ * or the user points at the item, never on the page's say-so.
+ */
+async function addSiteMedia(tabId: number, frameId: number, items: unknown[], trusted = false) {
   const tab = await chrome.tabs.get(tabId).catch(() => null);
   if (!tab) return;
   const http = (u: unknown): u is string => typeof u === 'string' && /^https?:\/\//.test(u) && u.length < 8192;
@@ -724,12 +736,13 @@ async function addSiteMedia(tabId: number, frameId: number, items: unknown[]) {
       const res = await fetch(it.configUrl, { credentials: 'include' }).catch(() => null);
       const json = res?.ok ? await res.json().catch(() => null) : null;
       const found = vimeo(json);
-      if (found.length) await addSiteMedia(tabId, frameId, found);
+      if (found.length) await addSiteMedia(tabId, frameId, found, true);
       continue;
     }
-    if (http(it.hls)) await addMedia(tabId, frameId, it.hls, 'hls', meta);
-    else if (http(it.dash)) await addMedia(tabId, frameId, it.dash, 'dash', meta);
-    else if (typeof it.dashXml === 'string' && it.dashXml.length < 4e6)
+    if (http(it.hls)) await addMedia(tabId, frameId, it.hls, 'hls', meta, trusted);
+    else if (http(it.dash)) await addMedia(tabId, frameId, it.dash, 'dash', meta, trusted);
+    // Inline manifests are kept in memory and session storage (10 MB quota): bound their size and number.
+    else if (typeof it.dashXml === 'string' && it.dashXml.length < 3e5 && (media.get(tabId) ?? []).filter((m) => m.manifest).length < 20)
       // Inline manifest: a synthetic URL keeps items distinct; BaseURLs resolve against the page.
       await addMedia(tabId, frameId, `about:reelfetch-${ruleId(it.key)}`, 'dash', { ...meta, manifest: it.dashXml });
     else if (Array.isArray(it.variants)) {
@@ -778,7 +791,7 @@ async function addYoutubeApiMedia(tabId: number, frameId: number, key: string, p
     if (!res.ok) return;
     const found = youtube(await res.json()).filter((m) => m.variants?.length);
     for (const m of found) m.key = `${m.key}:api`;
-    if (found.length) await addSiteMedia(tabId, frameId, found);
+    if (found.length) await addSiteMedia(tabId, frameId, found, true);
   } catch (e) {
     console.warn('[ReelFetch] YouTube API lookup failed', e);
   }
@@ -804,7 +817,7 @@ async function onContent(msg: ContentMessage, tabId: number, frameId: number) {
       info.names = names;
       for (const m of media.get(tabId) ?? []) applyPostName(m);
     }
-    for (const url of msg.urls) {
+    for (const url of Array.isArray(msg.urls) ? msg.urls.slice(0, 200) : []) {
       const det = classify({ url }) ?? (/^https?:/.test(url) ? { kind: 'direct' as const } : null);
       if (det) await addMedia(tabId, frameId, url, det.kind, { mime: det.mime }, false);
     }
@@ -858,7 +871,7 @@ async function onUi(msg: UiRequest): Promise<unknown> {
     }
     case 'download': {
       const item = [...media.values()].flat().find((m) => m.id === msg.mediaId);
-      if (!item) throw new Error('Media no longer available');
+      if (!item) throw new Error(t('err_media_gone'));
       await enqueue(item, { variantId: msg.variantId, audioOnly: msg.audioOnly, saveAs: msg.saveAs, ytdlp: msg.ytdlp });
       return true;
     }
@@ -908,6 +921,12 @@ async function onUi(msg: UiRequest): Promise<unknown> {
       await chrome.tabs.reload(msg.tabId, { bypassCache: true });
       return true;
     }
+    case 'analyze': {
+      // The user pointed at a page-reported stream: now its manifest may be fetched.
+      const item = [...media.values()].flat().find((m) => m.id === msg.mediaId);
+      if (item && (item.kind === 'hls' || item.kind === 'dash') && item.analyzed === undefined) void analyzeItem(item);
+      return true;
+    }
     case 'preview': {
       const item = [...media.values()].flat().find((m) => m.id === msg.mediaId);
       if (!item || (item.kind !== 'hls' && item.kind !== 'dash')) return null;
@@ -921,7 +940,7 @@ async function onUi(msg: UiRequest): Promise<unknown> {
     }
     case 'default-action': {
       const item = [...media.values()].flat().find((m) => m.id === msg.mediaId);
-      if (!item) throw new Error('Media no longer available');
+      if (!item) throw new Error(t('err_media_gone'));
       await runDefault(item, msg.variantId);
       return settings.defaultAction;
     }
@@ -933,7 +952,7 @@ async function onUi(msg: UiRequest): Promise<unknown> {
           captureOnly: true,
           mse: { bytes: 0, mimes: [] },
         }));
-      if (!item) throw new Error('Tab not available');
+      if (!item) throw new Error(t('err_tab_closed'));
       await enqueue(item, { turbo: true });
       return true;
     }
@@ -1079,6 +1098,9 @@ chrome.commands.onCommand.addListener((cmd) => {
     if (tab?.id != null) await downloadBest(tab.id);
   });
 });
+
+// A turbo capture cut short by a browser exit leaves its temporary hosts registered (they persist across sessions).
+chrome.runtime.onStartup.addListener(() => void ready.then(() => setCaptureScripts(settings.captureSites)));
 
 chrome.runtime.onInstalled.addListener(() => {
   void ready.then(() => {

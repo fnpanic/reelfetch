@@ -1,6 +1,9 @@
 /** MPEG-DASH MPD parser: turns every representation into a flat segment list. Needs DOMParser. */
 import type { ByteRange, Segment } from './hls';
 
+/** More segments than any real stream lists (24 h of 1 s segments is 86,400). */
+const MAX_SEGMENTS = 200_000;
+
 export type DashContent = 'video' | 'audio' | 'text';
 
 export interface DashRep {
@@ -64,7 +67,7 @@ export function fillTemplate(
     const val = (v as Record<string, unknown>)[name];
     if (val == null) return m;
     const s = String(val);
-    return width ? s.padStart(Number(width), '0') : s;
+    return width ? s.padStart(Math.min(Number(width), 20), '0') : s; // a manifest must not ask for gigabytes of padding
   });
 }
 
@@ -117,13 +120,21 @@ function templateSegments(
     ? { url: new URL(fillTemplate(a.initialization, vars), base).toString() }
     : undefined;
   const out: Segment[] = [];
-  const push = (n: number, time: number, d: number) =>
+  // Manifests come from untrusted servers: a zero duration or a huge repeat count must not loop (almost) forever.
+  const dur = (v: string | null) => {
+    const d = Number(v);
+    if (!(d > 0)) throw new Error('DASH manifest: invalid segment duration');
+    return d;
+  };
+  const push = (n: number, time: number, d: number) => {
+    if (out.length >= MAX_SEGMENTS) throw new Error('DASH manifest: too many segments');
     out.push({
       url: new URL(fillTemplate(a.media, { ...vars, Number: n, Time: time }), base).toString(),
       duration: d / timescale,
       seq: n,
       map: init,
     });
+  };
 
   if (tpl.timeline) {
     let t = 0;
@@ -131,20 +142,20 @@ function templateSegments(
     const end = periodDuration != null ? pto + periodDuration * timescale : Infinity;
     for (const s of kids(tpl.timeline, 'S')) {
       t = num(s.getAttribute('t')) ?? t;
-      const d = Number(s.getAttribute('d'));
+      const d = dur(s.getAttribute('d'));
       let r = num(s.getAttribute('r')) ?? 0;
       if (r < 0) r = isFinite(end) ? Math.ceil((end - t) / d) - 1 : 0;
       for (let i = 0; i <= r; i++, n++, t += d) push(n, t, d);
     }
   } else if (a.duration && live) {
     // Number-based live: segments that are fully available now, within the time-shift window.
-    const d = Number(a.duration);
+    const d = dur(a.duration);
     const elapsed = (live.now - live.availabilityStart) / 1000 - live.periodStart;
     const last = Math.floor((elapsed * timescale) / d) - 1;
     const first = Math.max(0, last - Math.floor((live.timeShift * timescale) / d));
     for (let i = first; i <= last; i++) push(startNumber + i, pto + i * d, d);
   } else if (a.duration && periodDuration != null) {
-    const d = Number(a.duration);
+    const d = dur(a.duration);
     const count = Math.ceil((periodDuration * timescale) / d - 1e-9);
     for (let i = 0; i < count; i++) push(startNumber + i, pto + i * d, d);
   }

@@ -170,5 +170,9 @@
   "update_manual_hint": "Sæktu nýja uppsetningarforritið og keyrðu það til að uppfæra.",
   "turbo_partial": "Að hluta: vefurinn stöðvaði spilun, vistað",
   "time_left": "$1 eftir",
-  "same_name_more": "$1 í viðbót með sama nafni"
+  "same_name_more": "$1 í viðbót með sama nafni",
+  "err_media_gone": "Þetta efni er ekki lengur tiltækt. Endurhlaðið síðuna.",
+  "err_page_load": "Síðan hlóðst ekki að fullu.",
+  "picker_hint": "Smelltu á einindið sem inniheldur titil myndbandsins (Esc til að hætta við)",
+  "picker_use": "smelltu til að nota sem skráarheiti"
 }

@@ -170,5 +170,9 @@
   "update_manual_hint": "Pobierz nowy instalator i uruchom go, aby zaktualizować.",
   "turbo_partial": "Częściowe: strona zatrzymała odtwarzanie, zapisano",
   "time_left": "pozostało $1",
-  "same_name_more": "Jeszcze $1 o tej samej nazwie"
+  "same_name_more": "Jeszcze $1 o tej samej nazwie",
+  "err_media_gone": "To multimedium nie jest już dostępne. Odśwież stronę.",
+  "err_page_load": "Strona nie załadowała się do końca.",
+  "picker_hint": "Kliknij element zawierający tytuł wideo (Esc, aby anulować)",
+  "picker_use": "kliknij, aby użyć jako nazwy pliku"
 }

@@ -170,5 +170,9 @@
   "update_manual_hint": "Prenesite novi namestitveni program in ga zaženite za posodobitev.",
   "turbo_partial": "Delno: spletno mesto je ustavilo predvajanje, shranjeno",
   "time_left": "še $1",
-  "same_name_more": "Še $1 z enakim imenom"
+  "same_name_more": "Še $1 z enakim imenom",
+  "err_media_gone": "Ta medij ni več na voljo. Znova naložite stran.",
+  "err_page_load": "Stran se ni naložila do konca.",
+  "picker_hint": "Kliknite element, ki vsebuje naslov videa (Esc za preklic)",
+  "picker_use": "kliknite za uporabo kot ime datoteke"
 }

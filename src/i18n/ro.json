@@ -170,5 +170,9 @@
   "update_manual_hint": "Descărcați noul program de instalare și rulați-l pentru actualizare.",
   "turbo_partial": "Parțial: site-ul a oprit redarea, salvat",
   "time_left": "mai rămân $1",
-  "same_name_more": "Încă $1 cu același nume"
+  "same_name_more": "Încă $1 cu același nume",
+  "err_media_gone": "Acest conținut media nu mai este disponibil. Reîncărcați pagina.",
+  "err_page_load": "Pagina nu s-a încărcat complet.",
+  "picker_hint": "Faceți clic pe elementul care conține titlul videoclipului (Esc pentru anulare)",
+  "picker_use": "faceți clic pentru a-l folosi ca nume de fișier"
 }

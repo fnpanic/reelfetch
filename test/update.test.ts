@@ -15,7 +15,6 @@ describe('updates', () => {
     const sha = 'a'.repeat(64);
     expect(parseRelease({ version: '1.2.0', zip: 'reelfetch-chrome-1.2.0.zip', sha256: sha.toUpperCase(), setup: 'ReelFetch-Setup-1.2.0.exe' })).toEqual({
       version: '1.2.0',
-      notes: undefined,
       zip: 'reelfetch-chrome-1.2.0.zip',
       sha256: sha,
       setup: 'ReelFetch-Setup-1.2.0.exe',

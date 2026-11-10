@@ -170,5 +170,9 @@
   "update_manual_hint": "Baixeu el nou instal·lador i executeu-lo per actualitzar.",
   "turbo_partial": "Parcial: el lloc ha aturat la reproducció, desat",
   "time_left": "falten $1",
-  "same_name_more": "$1 més amb el mateix nom"
+  "same_name_more": "$1 més amb el mateix nom",
+  "err_media_gone": "Aquest contingut ja no està disponible. Torneu a carregar la pàgina.",
+  "err_page_load": "La pàgina no s'ha acabat de carregar.",
+  "picker_hint": "Feu clic a l'element que conté el títol del vídeo (Esc per cancel·lar)",
+  "picker_use": "feu clic per utilitzar-lo com a nom de fitxer"
 }

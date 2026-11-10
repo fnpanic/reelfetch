@@ -170,5 +170,9 @@
   "update_manual_hint": "Sćehńće nowy instalaciski program a startujće jón za aktualizaciju.",
   "turbo_partial": "Njedospołne: sydło je wothraće zastajiło, składowane",
   "time_left": "hišće $1",
-  "same_name_more": "$1 dalše z samsnym mjenom"
+  "same_name_more": "$1 dalše z samsnym mjenom",
+  "err_media_gone": "Tutón medij hižo k dispoziciji njeje. Začitajće stronu znowa.",
+  "err_page_load": "Strona njeje so dospołnje začitała.",
+  "picker_hint": "Klikńće na element, kotryž titul wideja wobsahuje (Esc za přetorhnjenje)",
+  "picker_use": "klikńće, zo byšće jón jako datajowe mjeno wužiwał"
 }

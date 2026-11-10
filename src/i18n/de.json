@@ -170,5 +170,9 @@
   "update_manual_hint": "Neues Setup herunterladen und ausführen, um zu aktualisieren.",
   "turbo_partial": "Unvollständig: Die Website hat die Wiedergabe gestoppt, gespeichert",
   "time_left": "noch $1",
-  "same_name_more": "$1 weitere mit gleichem Namen"
+  "same_name_more": "$1 weitere mit gleichem Namen",
+  "err_media_gone": "Dieses Medium ist nicht mehr verfügbar. Seite neu laden.",
+  "err_page_load": "Die Seite wurde nicht vollständig geladen.",
+  "picker_hint": "Auf das Element klicken, das den Videotitel enthält (Esc zum Abbrechen)",
+  "picker_use": "klicken, um es als Dateinamen zu verwenden"
 }

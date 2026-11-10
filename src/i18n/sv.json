@@ -170,5 +170,9 @@
   "update_manual_hint": "Ladda ner det nya installationsprogrammet och kör det för att uppdatera.",
   "turbo_partial": "Delvis: webbplatsen stoppade uppspelningen, sparat",
   "time_left": "$1 kvar",
-  "same_name_more": "$1 till med samma namn"
+  "same_name_more": "$1 till med samma namn",
+  "err_media_gone": "Detta media är inte längre tillgängligt. Läs in sidan igen.",
+  "err_page_load": "Sidan lästes inte in helt.",
+  "picker_hint": "Klicka på elementet som innehåller videons titel (Esc för att avbryta)",
+  "picker_use": "klicka för att använda som filnamn"
 }

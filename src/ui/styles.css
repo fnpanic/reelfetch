@@ -4,7 +4,7 @@
   --text: #1c1b1a;
   --muted: #6f6b66;
   --line: #e7e3de;
-  --accent: #e5484d;
+  --accent: #cf3a40; /* 4.9:1 against white: WCAG AA for the button and link text */
   --accent-ink: #ffffff;
   --accent-soft: #fde8e8;
   --ok: #2f9e6b;

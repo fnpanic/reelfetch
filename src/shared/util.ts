@@ -15,6 +15,17 @@ export function hostMatches(host: string, site: string): boolean {
   return !!site && (host === site || host.endsWith('.' + site));
 }
 
+/** A site-list entry as a bare host ("https://Video.Example.com/x" -> "video.example.com"); '' when it is no host name. */
+export function siteHost(entry: string): string {
+  const h = entry.trim().replace(/^[a-z]+:\/\//i, '').replace(/^\*\./, '').replace(/[/?#].*$/, '');
+  try {
+    const host = new URL(`http://${h}`).hostname.replace(/^www\./, ''); // lower-cases, punycodes
+    return /^[a-z0-9-]+(\.[a-z0-9-]+)*$/.test(host) ? host : '';
+  } catch {
+    return '';
+  }
+}
+
 const RESERVED = /^(con|prn|aux|nul|com\d|lpt\d)$/i;
 
 /** Make one path segment safe on Windows, macOS and Linux. */

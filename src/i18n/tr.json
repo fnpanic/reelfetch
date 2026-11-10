@@ -170,5 +170,9 @@
   "update_manual_hint": "Güncellemek için yeni kurulumu indirip çalıştırın.",
   "turbo_partial": "Kısmi: site oynatmayı durdurdu, kaydedilen",
   "time_left": "$1 kaldı",
-  "same_name_more": "Aynı ada sahip $1 tane daha"
+  "same_name_more": "Aynı ada sahip $1 tane daha",
+  "err_media_gone": "Bu medya artık kullanılamıyor. Sayfayı yeniden yükleyin.",
+  "err_page_load": "Sayfa tam olarak yüklenmedi.",
+  "picker_hint": "Video başlığını içeren öğeye tıklayın (iptal için Esc)",
+  "picker_use": "dosya adı olarak kullanmak için tıklayın"
 }

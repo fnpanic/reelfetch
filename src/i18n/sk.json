@@ -170,5 +170,9 @@
   "update_manual_hint": "Stiahnite nový inštalátor a spustite ho na aktualizáciu.",
   "turbo_partial": "Čiastočné: web zastavil prehrávanie, uložené",
   "time_left": "zostáva $1",
-  "same_name_more": "Ďalších $1 s rovnakým názvom"
+  "same_name_more": "Ďalších $1 s rovnakým názvom",
+  "err_media_gone": "Toto médium už nie je dostupné. Načítajte stránku znova.",
+  "err_page_load": "Stránka sa nenačítala celá.",
+  "picker_hint": "Kliknite na prvok, ktorý obsahuje názov videa (Esc na zrušenie)",
+  "picker_use": "kliknutím použijete ako názov súboru"
 }

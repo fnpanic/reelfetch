@@ -1,6 +1,6 @@
 /** Isolated-world content script: reports <video>/<audio> sources, page thumbnail, and relays MSE capture events. */
 import type { PostName } from '../shared/messages';
-import { genericMeta, postKey } from '../shared/sites';
+import { EXTRACTOR_HOSTS, genericMeta, postKey } from '../shared/sites';
 
 const send = (msg: unknown) => {
   try {
@@ -104,7 +104,8 @@ setTimeout(scanMeta, 3000);
 window.addEventListener('message', (e) => {
   if (e.source !== window) return;
   if (e.data?.__reelfetch === 'site' && Array.isArray(e.data.items)) {
-    send({ type: 'site-media', items: e.data.items.slice(0, 20) });
+    // Any page script can post this message: relay it only where our extractor runs.
+    if (EXTRACTOR_HOSTS.test(location.hostname)) send({ type: 'site-media', items: e.data.items.slice(0, 20) });
     return;
   }
   if (e.data?.__reelfetch === 'turbo' && typeof e.data.msId === 'string') {

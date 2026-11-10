@@ -216,8 +216,13 @@ function MediaRow({
       ? t('record_button')
       : t(`action_${action}`);
 
+  // A stream the page only reported is not fetched until the user points at it.
+  const analyze = () => {
+    if ((item.kind === 'hls' || item.kind === 'dash') && item.analyzed === undefined) void send({ type: 'analyze', mediaId: item.id });
+  };
+
   return (
-    <li className="row">
+    <li className="row" onMouseEnter={analyze} onFocus={analyze}>
       <Thumb item={item} settings={settings} variantUrl={selected?.ref} />
       <div className="body">
         <div className="name" title={title}>
@@ -247,7 +252,11 @@ function MediaRow({
         {item.captureOnly && <div className="meta">{t('turbo_capture_hint')}</div>}
         {details && <Details item={item} />}
       </div>
-      <div className="actions">
+      <div
+        className="actions"
+        onKeyDown={(e) => e.key === 'Escape' && setMenu(false)}
+        onBlur={(e) => !e.currentTarget.contains(e.relatedTarget) && setMenu(false)}
+      >
         {variants.length > 1 && (
           <select aria-label={t('quality')} value={selected?.id} onChange={(e) => setVariantId(e.target.value)}>
             {variants.map((v) => (
@@ -273,19 +282,20 @@ function MediaRow({
           </button>
         </div>
         {menu && (
-          <div className="menu" role="menu" onMouseLeave={() => setMenu(false)}>
-            <button role="menuitem" disabled={item.drm} onClick={() => download()}>
+          // preventDefault keeps the focus on the ⋮ button (some browsers don't focus a clicked button, and the
+          // blur would close the menu before the click lands).
+          <div className="menu" onMouseDown={(e) => e.preventDefault()} onMouseLeave={() => setMenu(false)}>
+            <button disabled={item.drm} onClick={() => download()}>
               <Icon name="download" /> {t('download_button')}
             </button>
-            <button role="menuitem" disabled={item.drm} onClick={() => download({ saveAs: true })}>
+            <button disabled={item.drm} onClick={() => download({ saveAs: true })}>
               <Icon name="folder" /> {t('download_as')}
             </button>
-            <button role="menuitem" disabled={item.drm} onClick={() => download({ audioOnly: true })}>
+            <button disabled={item.drm} onClick={() => download({ audioOnly: true })}>
               <Icon name="music" /> {t('download_audio_only')}
             </button>
             {!capture && (
               <button
-                role="menuitem"
                 onClick={() => {
                   void navigator.clipboard.writeText(selected?.ref && item.kind === 'direct' ? selected.ref : item.url);
                   setMenu(false);
@@ -297,7 +307,6 @@ function MediaRow({
             )}
             {!capture && !item.drm && (
               <button
-                role="menuitem"
                 onClick={() => {
                   void navigator.clipboard.writeText(ytDlpCommand(item, item.kind === 'direct' ? selected?.ref : undefined));
                   setMenu(false);
@@ -308,23 +317,22 @@ function MediaRow({
               </button>
             )}
             {ytdlp && !item.drm && (!capture || item.site) && (
-              <button role="menuitem" onClick={() => download({ ytdlp: true })}>
+              <button onClick={() => download({ ytdlp: true })}>
                 <Icon name="download" /> {t('download_ytdlp')}
               </button>
             )}
             {item.kind === 'direct' && !selected?.audioRef && (
-              <button role="menuitem" onClick={() => chrome.tabs.create({ url: selected?.ref ?? item.url })}>
+              <button onClick={() => chrome.tabs.create({ url: selected?.ref ?? item.url })}>
                 <Icon name="play" /> {t('play')}
               </button>
             )}
             {tabId != null && !item.captureOnly && (
-              <button role="menuitem" disabled={item.drm} onClick={() => run({ type: 'turbo', tabId, mediaId: capture ? item.id : undefined })}>
+              <button disabled={item.drm} onClick={() => run({ type: 'turbo', tabId, mediaId: capture ? item.id : undefined })}>
                 <Icon name="record" /> {t('turbo_capture')}
               </button>
             )}
             {tabId != null && (
               <button
-                role="menuitem"
                 onClick={async () => {
                   await send({ type: 'pick-name', tabId });
                   window.close();
@@ -334,7 +342,6 @@ function MediaRow({
               </button>
             )}
             <button
-              role="menuitem"
               onClick={() => {
                 setDetails(!details);
                 setMenu(false);

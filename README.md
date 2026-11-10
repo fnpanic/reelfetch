@@ -47,17 +47,28 @@ Requires Node.js 20.19+ or 22.12+.
 ### Publishing a release (Windows setup + updates)
 
 ```bash
-# bump "version" in package.json first; needs Inno Setup 6 and Cloudflare credentials
+# bump "version" in package.json first; needs Inno Setup 6, the release signing key and Cloudflare credentials
 # (CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID, or `npx wrangler login`)
 npm run release          # -> release/: setup .exe, zips, latest.json, download page
-npm run release:deploy   # same, then publishes release/ as the Cloudflare Worker in package.json "reelfetch"
+npm run release:deploy   # typecheck + tests first, then the same, then publishes release/ as the Cloudflare
+                         # Worker in package.json "reelfetch"
 ```
 
 How updates work: the extension (`src/background/update.ts`) reads `latest.json` from `reelfetch.updateUrl`. The setup
 registers a native messaging host (`installer/updater.ps1`, allowed for this extension's fixed ID only) for Chrome,
 Edge, Brave and Chromium. On *update* it downloads `latest.json` and the zip it names **from the URL fixed at install
-time**, checks the SHA-256, mirrors the files into the extension folder, and the extension reloads itself. Installs
-without the setup (zip, Firefox) only show a banner linking to the new download.
+time**, checks the release signature and the SHA-256, refuses anything older than what is installed, mirrors the files
+into the extension folder, and the extension reloads itself. Installs without the setup (zip, Firefox) only show a
+banner linking to the new download.
+
+Releases are signed (setup 1.5.0+): `scripts/sign.mjs` signs `<version>\n<sha256>` with an RSA key that stays on the
+publisher's PC (`REELFETCH_SIGNING_KEY`, default `~/.reelfetch/update-signing-key.pem`), and the updater only installs
+what verifies against the public key pinned in `installer/updater.ps1`. The update server just stores files, so
+taking it over is not enough to ship code. Keep a backup of the key: without it no update can be signed, and users
+would have to run a new setup built with a new key. The updater itself (`updater.ps1`) is only replaced by running
+a setup, so installs made with a setup older than 1.5.0 keep checking the SHA-256 only until the setup is run again.
+Automatic updates apply only when the copy the updater manages is the one the browser runs; a browser that loads
+the extension from another folder gets the **Update now** banner instead.
 
 ## Use
 
@@ -212,6 +223,10 @@ Test fixtures in `test/fixtures` were generated with ffmpeg (see `test/fixtures/
 
 ## Known limitations
 
+- MSE and Turbo captures are saved by the page itself, so they land directly in the browser's download folder:
+  the download sub-directory and *Download As…* / "always ask" settings do not apply to them.
+- Streams a page only names (Open Graph / JSON-LD tags, player data) are not fetched on the page's say-so: their
+  qualities and duration appear once the page loads the stream itself or you point at the item in the list.
 - MSE capture records only what is played. Seeking while recording can produce gaps (Turbo capture avoids this by
   playing from the start). Turbo capture follows the player's adaptive quality; it requests the best level on
   YouTube, other players may pick lower levels on slow connections.

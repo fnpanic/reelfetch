@@ -170,5 +170,9 @@
   "update_manual_hint": "Download the new setup and run it to update.",
   "turbo_partial": "Partial: the site stopped playback, saved",
   "time_left": "$1 left",
-  "same_name_more": "$1 more with the same name"
+  "same_name_more": "$1 more with the same name",
+  "err_media_gone": "This media is no longer available. Reload the page.",
+  "err_page_load": "The page did not finish loading.",
+  "picker_hint": "Click the element that contains the video title (Esc to cancel)",
+  "picker_use": "click to use as file name"
 }

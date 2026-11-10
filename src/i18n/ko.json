@@ -170,5 +170,9 @@
   "update_manual_hint": "새 설치 프로그램을 다운로드하여 실행하면 업데이트됩니다.",
   "turbo_partial": "일부만: 사이트가 재생을 중지함, 저장됨",
   "time_left": "$1 남음",
-  "same_name_more": "같은 이름의 항목 $1개 더"
+  "same_name_more": "같은 이름의 항목 $1개 더",
+  "err_media_gone": "이 미디어를 더 이상 사용할 수 없습니다. 페이지를 새로 고치세요.",
+  "err_page_load": "페이지 로드가 완료되지 않았습니다.",
+  "picker_hint": "동영상 제목이 들어 있는 요소를 클릭하세요 (Esc로 취소)",
+  "picker_use": "클릭하여 파일 이름으로 사용"
 }

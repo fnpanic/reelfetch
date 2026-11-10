@@ -67,6 +67,12 @@ export function useSettings(): [Settings | null, (p: Partial<Settings>) => void]
   const [s, setS] = useState<Settings | null>(null);
   useEffect(() => {
     void loadSettings().then(setS);
+    // The background writes settings too (capture toggle, title picker): a stale copy here would overwrite them.
+    const onChanged = (c: Record<string, chrome.storage.StorageChange>, area: string) => {
+      if (area === 'local' && c.settings) void loadSettings().then(setS);
+    };
+    chrome.storage.onChanged.addListener(onChanged);
+    return () => chrome.storage.onChanged.removeListener(onChanged);
   }, []);
   const update = useCallback((patch: Partial<Settings>) => {
     setS((cur) => (cur ? { ...cur, ...patch } : cur));

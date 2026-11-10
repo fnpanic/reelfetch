@@ -2,6 +2,8 @@
  * Smart-naming element picker (injected on demand): hover to highlight, click to save a naming rule
  * for this site from the clicked element, Esc to cancel.
  */
+import { t } from '../shared/i18n';
+
 (() => {
   const w = window as unknown as { __reelfetchPicker?: boolean };
   if (w.__reelfetchPicker) return;
@@ -18,7 +20,7 @@
     background: '#1c1b1a', color: '#fff', font: '13px system-ui, sans-serif', padding: '8px 12px',
     borderRadius: '8px', boxShadow: '0 6px 20px rgba(0,0,0,.3)', pointerEvents: 'none', maxWidth: '80vw',
   });
-  tip.textContent = 'ReelFetch: click the element that contains the video title (Esc to cancel)';
+  tip.textContent = `ReelFetch: ${t('picker_hint')}`;
   document.documentElement.append(box, tip);
 
   const esc = (s: string) => CSS.escape(s);
@@ -67,7 +69,7 @@
     target = el;
     const r = el.getBoundingClientRect();
     Object.assign(box.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
-    tip.textContent = `ReelFetch: "${(el.textContent ?? '').trim().slice(0, 80) || el.tagName.toLowerCase()}" - click to use as file name`;
+    tip.textContent = `ReelFetch: "${(el.textContent ?? '').trim().slice(0, 80) || el.tagName.toLowerCase()}" - ${t('picker_use')}`;
   };
   const done = () => {
     removeEventListener('mousemove', onMove, true);
@@ -84,12 +86,12 @@
     const selector = selectorFor(target);
     const text = (target.textContent ?? '').replace(/\s+/g, ' ').trim();
     void chrome.runtime.sendMessage({ type: 'picker-result', selector, text });
-    tip.textContent = `ReelFetch: saved naming rule (${selector})`;
+    tip.textContent = `ReelFetch: ${t('smart_naming_saved')} (${selector})`;
     done();
   };
   const onKey = (e: KeyboardEvent) => {
     if (e.key !== 'Escape') return;
-    tip.textContent = 'ReelFetch: canceled';
+    tip.textContent = `ReelFetch: ${t('status_canceled')}`;
     done();
   };
   addEventListener('mousemove', onMove, true);

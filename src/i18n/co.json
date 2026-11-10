@@ -170,5 +170,9 @@
   "update_manual_hint": "Scaricate u novu installatore è lanciatelu per aghjurnà.",
   "turbo_partial": "Parziale: u situ hà firmatu a lettura, salvatu",
   "time_left": "restanu $1",
-  "same_name_more": "$1 altri cù u listessu nome"
+  "same_name_more": "$1 altri cù u listessu nome",
+  "err_media_gone": "Stu media ùn hè più dispunibule. Ricaricate a pagina.",
+  "err_page_load": "A pagina ùn hà micca finitu di caricassi.",
+  "picker_hint": "Cliccate nant'à l'elementu chì cuntene u titulu di a video (Esc per annullà)",
+  "picker_use": "cliccate per impiegallu cum'è nome di schedariu"
 }

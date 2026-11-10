@@ -4,7 +4,7 @@ import { fillTemplate, parseIsoDuration, parseMpd } from '../src/shared/dash';
 import { classify, extFor, mediaKey } from '../src/shared/detect';
 import { groupByTitle, pickByLang, pickVariant, visibleMedia } from '../src/shared/quality';
 import { buildBasename, cleanTitle } from '../src/shared/naming';
-import { sanitizeSegment, sanitizeSubdir, ytDlpCommand, ytDlpTarget } from '../src/shared/util';
+import { sanitizeSegment, sanitizeSubdir, siteHost, ytDlpCommand, ytDlpTarget } from '../src/shared/util';
 import type { MediaItem } from '../src/shared/types';
 
 describe('hls', () => {
@@ -165,6 +165,17 @@ describe('dash', () => {
     );
     expect(m.periods[0].reps[0].segments).toHaveLength(5);
   });
+
+  // Manifests come from untrusted servers (and pages): these used to loop forever or allocate gigabytes.
+  it('refuses manifests that would loop (almost) forever', () => {
+    const one = (tpl: string) =>
+      `<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" mediaPresentationDuration="PT10S"><Period><AdaptationSet contentType="video">${tpl}<Representation id="v"/></AdaptationSet></Period></MPD>`;
+    const parse = (tpl: string) => () => parseMpd(one(tpl), 'https://a.example/m.mpd');
+    expect(parse('<SegmentTemplate duration="0" media="$Number$.m4s"/>')).toThrow(/duration/);
+    expect(parse('<SegmentTemplate media="$Number$.m4s"><SegmentTimeline><S t="0" r="-1"/></SegmentTimeline></SegmentTemplate>')).toThrow(/duration/);
+    expect(parse('<SegmentTemplate media="$Number$.m4s"><SegmentTimeline><S t="0" d="1" r="4000000000"/></SegmentTimeline></SegmentTemplate>')).toThrow(/too many/);
+    expect(fillTemplate('$Number%0999999999d$', { RepresentationID: 'v', Number: 7 })).toHaveLength(20);
+  });
 });
 
 describe('detect', () => {
@@ -241,6 +252,15 @@ describe('naming', () => {
     expect(sanitizeSegment('CON')).toBe('_CON');
     expect(sanitizeSegment('...')).toBe('video');
     expect(sanitizeSubdir('../videos//2024/')).toBe('videos/2024');
+  });
+
+  // Site lists become content-script match patterns: one entry that is no host would break the registration.
+  it('reduces site-list entries to host names', () => {
+    expect(siteHost(' https://Video.Example.com/watch?v=1 ')).toBe('video.example.com');
+    expect(siteHost('*.example.com')).toBe('example.com');
+    expect(siteHost('www.example.com:8080')).toBe('example.com');
+    expect(siteHost('localhost')).toBe('localhost');
+    for (const bad of ['', 'a b', '*', 'exa*mple.com', 'http://']) expect(siteHost(bad)).toBe('');
   });
 
   it('builds names from templates', () => {

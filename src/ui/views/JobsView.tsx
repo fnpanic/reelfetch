@@ -120,6 +120,12 @@ export function JobsView({ jobs }: { jobs: Job[] }) {
                     </button>
                   </>
                 )}
+                {j.status === 'done' && j.options.ytdlp && (
+                  // yt-dlp writes the file itself, so there is no browser download to open or show.
+                  <button className="icon-btn" title={t('download_directory_button_tooltip')} onClick={() => chrome.downloads.showDefaultFolder()}>
+                    <Icon name="folder" />
+                  </button>
+                )}
                 {j.status !== 'running' && j.status !== 'queued' && (
                   <button className="icon-btn" title={t('remove')} onClick={() => send({ type: 'remove-job', jobId: j.id })}>
                     <Icon name="trash" />

@@ -82,7 +82,6 @@ export interface Job {
   /** Finished, but with a caveat the user should see (e.g. a partial turbo capture). */
   warning?: string;
   downloadIds?: number[];
-  blobUrls?: string[];
   filename?: string;
   /** Turbo capture: hosts temporarily added to the capture list for this job. */
   turboHosts?: string[];
