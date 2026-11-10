@@ -21,6 +21,8 @@ export interface UpdateState {
   /** The Windows updater is installed, so the update can be applied in place. */
   native: boolean;
   installing?: boolean;
+  /** The installed host can download with yt-dlp (setup 1.4.0+). */
+  ytdlp?: boolean;
 }
 
 /** True when version `a` is newer than `b` ("1.10.0" > "1.9.3"). */

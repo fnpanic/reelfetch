@@ -67,10 +67,16 @@ export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * get the page URL, which yt-dlp understands better; streams and files get their own URL plus the Referer.
  * Single quotes work in bash, zsh and PowerShell; a quote inside a URL is percent-encoded.
  */
-export function ytDlpCommand(m: { url: string; pageUrl: string; site?: string; headers: { referer?: string } }, ref?: string): string {
+export function ytDlpCommand(m: YtDlpMedia, ref?: string): string {
   const q = (s: string) => `'${s.replace(/'/g, '%27')}'`;
+  const { url, referer } = ytDlpTarget(m, ref);
+  return `yt-dlp${referer ? ` --referer ${q(referer)}` : ''} ${q(url)}`;
+}
+
+type YtDlpMedia = { url: string; pageUrl: string; site?: string; headers: { referer?: string } };
+/** What yt-dlp should be given for an item: see ytDlpCommand. */
+export function ytDlpTarget(m: YtDlpMedia, ref?: string): { url: string; referer?: string } {
   const target = ref && /^https?:/.test(ref) ? ref : m.url;
-  if (m.site || !/^https?:/.test(target)) return `yt-dlp ${q(m.pageUrl)}`;
-  const referer = m.headers.referer ?? m.pageUrl;
-  return `yt-dlp${referer ? ` --referer ${q(referer)}` : ''} ${q(target)}`;
+  if (m.site || !/^https?:/.test(target)) return { url: m.pageUrl };
+  return { url: target, referer: m.headers.referer ?? (m.pageUrl || undefined) };
 }

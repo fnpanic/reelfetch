@@ -38,6 +38,7 @@ function statusText(j: Job): string {
     return p.duration
       ? `${t('status_turbo')} ${formatDuration(p.recorded ?? 0)} / ${formatDuration(p.duration)} · ${formatBytes(p.bytes)}`
       : `${t('status_recording')} ${formatDuration(p.recorded ?? 0)} · ${formatBytes(p.bytes)}`;
+  if (p.phase === 'setup') return t('status_ytdlp_setup');
   if (p.phase === 'mux') return t('status_muxing');
   if (p.phase === 'convert') return t('status_converting');
   if (p.phase === 'save') return t('status_saving');

@@ -39,7 +39,9 @@ export async function checkForUpdate(): Promise<UpdateState> {
     s.error = e instanceof Error ? e.message : String(e);
   }
   s.checkedAt = Date.now();
-  s.native = !!(await native<{ ok: boolean }>({ op: 'ping' }))?.ok;
+  const ping = await native<{ ok: boolean; ytdlp?: boolean }>({ op: 'ping' });
+  s.native = !!ping?.ok;
+  s.ytdlp = !!ping?.ytdlp;
   s.installing = false;
   await save(s);
   return s;

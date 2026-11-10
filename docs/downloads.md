@@ -19,6 +19,14 @@ list, and how to diagnose the problems that are most often reported.
      connection drops or the server answers 5xx/408/429, the download resumes with a `Range` request from the
      current position (up to 5 attempts, exponential backoff). The file is saved byte-identical - no remux.
    - **YouTube's CDN** (`googlevideo.com`) throttles whole-file requests, so it is fetched in 8 MB ranges.
+   - **YouTube with yt-dlp** (Windows setup 1.4.0+): YouTube's CDN answers ReelFetch's own requests more and more
+     often with `HTTP 403`, so YouTube jobs go to [yt-dlp](https://github.com/yt-dlp/yt-dlp) through the Windows
+     native host instead. On the first such download the host fetches `yt-dlp.exe`, Deno (YouTube's JS challenges)
+     and, unless `ffmpeg` is on the PATH, ffmpeg (about 200 MB) into `%LOCALAPPDATA%\ReelFetch	ools`, each checked
+     against its release's SHA-256; yt-dlp updates itself daily. The file is written straight to the Windows
+     Downloads folder (plus the filename template's sub-folder), so it does not appear in the browser's download
+     list. Any other item can be sent to yt-dlp with ⋮ → **Download with yt-dlp**. Canceling kills yt-dlp and
+     deletes its partial files.
    - **HLS/DASH**: segments are downloaded (AES-128 decrypted where needed) and remuxed with mediabunny into MP4
      (or WebM/MKV/M4A/MP3 by settings); separate audio/video tracks are merged.
 4. **Hand-over** - the finished file is passed to `chrome.downloads` as a `blob:` URL with the final name. Because
@@ -36,7 +44,8 @@ list, and how to diagnose the problems that are most often reported.
 | **HTTP 503/5xx** errors | Server-side failure. Retried automatically with backoff (about 12 s in total) before the job fails. | Use **Retry** later. |
 | Hover preview shows nothing | 1.1.0-1.2.4 deleted the preview clip's temp file before it played. Fixed in 1.3.0. | Update to 1.3.0 or later. |
 | "The connection dropped and this server cannot resume downloads" | The connection broke mid-file and the server ignores `Range` requests, so the file can't be continued. | **Retry** starts the file from the beginning. |
-| ReelFetch can't save it at all | Unsupported site or stream. | ⋮ → **Copy yt-dlp command** and run it in a terminal ([yt-dlp](https://github.com/yt-dlp/yt-dlp)). |
+| **HTTP 403** on a YouTube video (`googlevideo.com`) | YouTube rejected ReelFetch's direct stream requests. | Install the Windows setup 1.4.0+: YouTube then downloads with yt-dlp automatically. |
+| ReelFetch can't save it at all | Unsupported site or stream. | ⋮ → **Download with yt-dlp** (Windows setup 1.4.0+), or **Copy yt-dlp command** and run it in a terminal ([yt-dlp](https://github.com/yt-dlp/yt-dlp)). |
 | "DRM-protected" | Widevine/PlayReady/FairPlay or HLS `SAMPLE-AES`. | Not supported by design. |
 
 ## Updates and running downloads

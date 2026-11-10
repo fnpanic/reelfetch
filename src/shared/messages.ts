@@ -21,7 +21,7 @@ export type EngineEvent =
 /** UI / content -> background. */
 export type UiRequest =
   | { type: 'get-state'; tabId?: number }
-  | { type: 'download'; mediaId: string; variantId?: string; audioOnly?: boolean; saveAs?: boolean }
+  | { type: 'download'; mediaId: string; variantId?: string; audioOnly?: boolean; saveAs?: boolean; ytdlp?: boolean }
   | { type: 'cancel'; jobId: string }
   | { type: 'stop'; jobId: string }
   | { type: 'retry'; jobId: string }

@@ -47,7 +47,7 @@ export function MediaView({ state, settings, update, onQueued }: Props) {
       ) : (
         <ul className="list">
           {media.map((m) => (
-            <MediaRow key={m.id} item={m} settings={settings} onQueued={onQueued} tabId={tabId} />
+            <MediaRow key={m.id} item={m} settings={settings} onQueued={onQueued} tabId={tabId} ytdlp={!!state.update.ytdlp} />
           ))}
         </ul>
       )}
@@ -150,11 +150,14 @@ function MediaRow({
   settings,
   onQueued,
   tabId,
+  ytdlp,
 }: {
   item: MediaItem;
   settings: Settings;
   onQueued: () => void;
   tabId?: number;
+  /** The Windows host can run yt-dlp. */
+  ytdlp: boolean;
 }) {
   const variants = item.variants ?? [];
   const [variantId, setVariantId] = useState(() => pickVariant(variants, settings.preferredQuality)?.id);
@@ -175,7 +178,7 @@ function MediaRow({
     else if (r === 'copy') setNote(t('copied'));
     else onQueued();
   };
-  const download = (opts: { audioOnly?: boolean; saveAs?: boolean } = {}) =>
+  const download = (opts: { audioOnly?: boolean; saveAs?: boolean; ytdlp?: boolean } = {}) =>
     run({ type: 'download', mediaId: item.id, variantId: selected?.id, ...opts });
 
   const chips = [
@@ -283,6 +286,11 @@ function MediaRow({
                 }}
               >
                 <Icon name="copy" /> {t('copy_ytdlp')}
+              </button>
+            )}
+            {ytdlp && !item.drm && (!capture || item.site) && (
+              <button role="menuitem" onClick={() => download({ ytdlp: true })}>
+                <Icon name="download" /> {t('download_ytdlp')}
               </button>
             )}
             {item.kind === 'direct' && !selected?.audioRef && (

@@ -65,6 +65,8 @@ export interface JobOptions {
   saveAs?: boolean;
   /** Turbo capture: play the page's video at high speed and save what the player received. */
   turbo?: boolean;
+  /** Download with yt-dlp through the Windows host (YouTube, or picked from the ⋮ menu). */
+  ytdlp?: boolean;
 }
 
 export interface Job {
@@ -97,7 +99,7 @@ export interface Progress {
   recorded?: number;
   /** Turbo capture: media duration in seconds. */
   duration?: number;
-  phase?: 'download' | 'mux' | 'convert' | 'save' | 'recording';
+  phase?: 'download' | 'mux' | 'convert' | 'save' | 'recording' | 'setup';
 }
 
 export interface HistoryEntry {

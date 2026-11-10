@@ -4,7 +4,7 @@ import { fillTemplate, parseIsoDuration, parseMpd } from '../src/shared/dash';
 import { classify, extFor, mediaKey } from '../src/shared/detect';
 import { pickByLang, pickVariant, visibleMedia } from '../src/shared/quality';
 import { buildBasename, cleanTitle } from '../src/shared/naming';
-import { sanitizeSegment, sanitizeSubdir, ytDlpCommand } from '../src/shared/util';
+import { sanitizeSegment, sanitizeSubdir, ytDlpCommand, ytDlpTarget } from '../src/shared/util';
 import type { MediaItem } from '../src/shared/types';
 
 describe('hls', () => {
@@ -256,5 +256,10 @@ describe('ytDlpCommand', () => {
   });
   it('uses the chosen variant and escapes quotes', () => {
     expect(ytDlpCommand(base, "https://cdn.example/it's.mp4")).toBe("yt-dlp --referer 'https://example.com/watch' 'https://cdn.example/it%27s.mp4'");
+  });
+  it('target for the native host: page URL for sites and turbo items, else media URL + Referer', () => {
+    expect(ytDlpTarget({ ...base, site: 'youtube' })).toEqual({ url: 'https://example.com/watch' });
+    expect(ytDlpTarget({ ...base, url: 'turbo:yt:abc' })).toEqual({ url: 'https://example.com/watch' });
+    expect(ytDlpTarget({ ...base, headers: {} }, 'https://cdn.example/a.mp4')).toEqual({ url: 'https://cdn.example/a.mp4', referer: 'https://example.com/watch' });
   });
 });

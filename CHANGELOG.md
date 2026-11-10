@@ -3,6 +3,18 @@
 All notable changes to ReelFetch. Versions follow [semantic versioning](https://semver.org/); dates are release
 dates. Releases are published to the update server with `npm run release:deploy` (see README → Publishing a release).
 
+## 1.4.0 - 2026-11-10
+
+### Added
+- **YouTube downloads with yt-dlp** (Windows setup). YouTube's CDN now often rejects ReelFetch's direct requests
+  with `HTTP 403`; with the setup installed, YouTube jobs run through [yt-dlp](https://github.com/yt-dlp/yt-dlp)
+  instead, with progress and cancel in the Downloads tab. The first one sets up yt-dlp, Deno and (if not on the
+  PATH) ffmpeg in `%LOCALAPPDATA%\ReelFetch	ools`, checked against their published SHA-256 sums; yt-dlp keeps
+  itself up to date. Files go to the Windows Downloads folder. See docs/downloads.md.
+- **⋮ → Download with yt-dlp** for any other item.
+
+Existing installs need the 1.4.0 setup once (the self-update replaces only the extension, not the native host).
+
 ## 1.3.1 - 2026-11-09
 
 ### Added

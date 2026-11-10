@@ -14,6 +14,7 @@ import { engine, hasOffscreen, onEngineEvent, usesOffscreen } from './engine-cli
 import { clearHeaderRule, pruneHeaderRules, ruleId, setHeaderRule, setYoutubeUaRule } from './rules';
 import { postKey, vimeo, youtube, youtubePlayerRequest, YT_IOS, type SiteMedia } from '../shared/sites';
 import { applyUpdate, checkForUpdate, scheduleUpdates, updateState } from './update';
+import { cancelYtdlp, startYtdlp } from './ytdlp';
 
 // ------------------------------------------------------------------ state
 
@@ -34,7 +35,7 @@ const isFirefox = !chrome.offscreen;
 const variantOf = (j: Job) => j.media.variants?.find((v) => v.id === j.options.variantId) ?? j.media.variants?.[0];
 /** Jobs handled by the stream engine: everything except MSE captures. Plain files go through it too and reach
  * the browser as blob: URLs, so a download-manager extension (AB Download Manager, IDM, ...) can't take them over. */
-const isEngineJob = (j: Job) => j.media.kind !== 'mse';
+const isEngineJob = (j: Job) => j.media.kind !== 'mse' && !j.options.ytdlp;
 const isTurbo = (j: Job) => j.media.kind === 'mse' && (!!j.options.turbo || !!j.media.captureOnly);
 
 const ready = (async () => {
@@ -276,6 +277,8 @@ async function smartName(item: MediaItem): Promise<string | undefined> {
 async function enqueue(item: MediaItem, options: Job['options']) {
   const host = hostOf(item.pageUrl || item.url);
   if (settings.audioOnlySites.some((s) => hostMatches(host, s))) options.audioOnly = true;
+  // YouTube's CDN rejects our own requests more and more (HTTP 403); yt-dlp keeps up with it. Turbo stays explicit.
+  if (item.site === 'youtube' && !options.turbo && (await updateState()).ytdlp) options.ytdlp = true;
   const variant = item.variants?.find((v) => v.id === options.variantId);
   const job: Job = {
     id: uid(),
@@ -346,6 +349,7 @@ setInterval(() => {
 }, 15_000);
 
 async function startJob(j: Job) {
+  if (j.options.ytdlp) return startYtdlpJob(j);
   if (isTurbo(j)) return startTurbo(j);
   if (j.media.kind === 'mse') return startMse(j);
   const v = variantOf(j);
@@ -356,6 +360,22 @@ async function startJob(j: Job) {
   if (j.status !== 'running') return cleanup(j); // canceled while we were setting up
   await engine({ op: 'start', job: j, settings: engineSettings() });
   if (j.status !== 'running') await engine({ op: 'cancel', jobId: j.id }).catch(() => {});
+}
+
+function startYtdlpJob(j: Job) {
+  startYtdlp(j, variantOf(j), {
+    progress(p) {
+      if (j.status !== 'running') return;
+      j.progress = p;
+      j.heartbeat = Date.now();
+      changed();
+    },
+    done(file, size) {
+      j.filename = file.split(/[\\/]/).pop();
+      void finish(j, size);
+    },
+    error: (e) => void fail(j, e),
+  });
 }
 
 // ------------------------------------------------------------------ turbo capture
@@ -589,6 +609,7 @@ async function cancel(j: Job) {
   j.status = 'canceled';
   if (wasRunning) {
     if (isEngineJob(j)) await engine({ op: 'cancel', jobId: j.id }).catch(() => {});
+    if (j.options.ytdlp) cancelYtdlp(j.id);
     for (const id of j.downloadIds ?? []) await chrome.downloads.cancel(id).catch(() => {});
   }
   await cleanup(j);
@@ -835,7 +856,7 @@ async function onUi(msg: UiRequest): Promise<unknown> {
     case 'download': {
       const item = [...media.values()].flat().find((m) => m.id === msg.mediaId);
       if (!item) throw new Error('Media no longer available');
-      await enqueue(item, { variantId: msg.variantId, audioOnly: msg.audioOnly, saveAs: msg.saveAs });
+      await enqueue(item, { variantId: msg.variantId, audioOnly: msg.audioOnly, saveAs: msg.saveAs, ytdlp: msg.ytdlp });
       return true;
     }
     case 'cancel':

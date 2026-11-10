@@ -52,6 +52,8 @@ Root: HKCU; Subkey: "Software\Chromium\NativeMessagingHosts\{#HostName}"; ValueT
 Type: files; Name: "{app}\updater\{#HostName}.json"
 Type: files; Name: "{app}\updater\config.json"
 Type: filesandordirs; Name: "{app}\extension"
+; yt-dlp, deno and ffmpeg, downloaded by the updater on the first yt-dlp download.
+Type: filesandordirs; Name: "{app}	ools"
 
 [Run]
 Filename: "{code:BrowserExe}"; Parameters: "{code:BrowserExtensionsUrl}"; Description: "{cm:OpenBrowser}"; Flags: postinstall nowait skipifsilent; Check: HasBrowser
