@@ -193,6 +193,14 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const dm = mkdtempSync(join(tmpdir(), 'rf-dm-'));
 writeFileSync(join(dm, 'manifest.json'), JSON.stringify({ manifest_version: 3, name: 'Mock DM', version: '1', permissions: ['downloads'], background: { service_worker: 'bg.js' } }));
 writeFileSync(join(dm, 'bg.js'), "chrome.downloads.onCreated.addListener(async (d) => { if (/^https?:/.test(d.url)) { await chrome.downloads.cancel(d.id).catch(() => {}); await chrome.downloads.erase({ id: d.id }).catch(() => {}); } });");
+// A real ReelFetch install registers its native host; with it, YouTube jobs would go to the real yt-dlp instead
+// of the local test server. Hide it from the test browser for the run (restored in finally).
+const reg = (...a) => { try { return execFileSync('reg', a, { encoding: 'utf8', stdio: 'pipe' }); } catch { return ''; } };
+const hiddenHosts = ['Google\\Chrome', 'Microsoft\\Edge', 'BraveSoftware\\Brave-Browser', 'Chromium']
+  .map((b) => `HKCU\\Software\\${b}\\NativeMessagingHosts\\app.reelfetch.updater`)
+  .map((k) => [k, /REG_SZ\s+(.+)/.exec(reg('query', k, '/ve'))?.[1].trim()])
+  .filter(([, v]) => v);
+for (const [k] of hiddenHosts) reg('delete', k, '/f');
 const ctx = await chromium.launchPersistentContext(await mkdtemp(join(tmpdir(), 'rf-e2e-')), {
   executablePath: chromePath,
   headless: true,
@@ -633,6 +641,7 @@ try {
     check(job?.status === 'done' && /codec_name=mp3/.test(probe) && !/vp9/.test(probe), `MP3 conversion: ${job?.status} ${probe} ${job?.error ?? ''}`);
   }
 } finally {
+  for (const [k, v] of hiddenHosts) reg('add', k, '/ve', '/d', v, '/f');
   await ctx.close();
   server.close();
   httpsServer?.close();

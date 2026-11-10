@@ -3,6 +3,13 @@
 All notable changes to ReelFetch. Versions follow [semantic versioning](https://semver.org/); dates are release
 dates. Releases are published to the update server with `npm run release:deploy` (see README → Publishing a release).
 
+## 1.4.1 - 2026-11-10
+
+### Fixed
+- **Retry** of a YouTube job created before 1.4.0 now uses yt-dlp too (it kept the old direct download and failed
+  with `HTTP 403` again). The yt-dlp check also asks the Windows host directly when the periodic check hasn't run
+  since the setup was installed.
+
 ## 1.4.0 - 2026-11-10
 
 ### Added
