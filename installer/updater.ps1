@@ -47,7 +47,7 @@ function Test-Signature($rel) {
 function Update-Extension($cfg) {
   $base = $cfg.base.TrimEnd('/')
   $rel = Invoke-RestMethod -UseBasicParsing -Uri "$base/latest.json" -Headers @{ 'Cache-Control' = 'no-cache' }
-  if ($rel.version -notmatch '^\d+(\.\d+){0,3}$' -or $rel.zip -notmatch '^[\w.\-]+$' -or $rel.sha256 -notmatch '^[0-9a-fA-F]{64}$') { throw 'Invalid release data' }
+  if ($rel.version -notmatch '^\d+(\.\d+){1,3}$' -or $rel.zip -notmatch '^[\w.\-]+$' -or $rel.sha256 -notmatch '^[0-9a-fA-F]{64}$') { throw 'Invalid release data' }
   if (-not (Test-Signature $rel)) { throw 'Update rejected: it is not signed by the ReelFetch publisher' }
   $installed = Get-InstalledVersion $cfg.extensionDir
   if ([version]$rel.version -lt [version]$installed) { throw 'Update rejected: it is older than the installed version' }
@@ -84,9 +84,11 @@ function Get-Checked($url, $sumsUrl, $name, $out) {
   # Download beside the target and move it there once checked: a dropped connection or a second job starting
   # at the same time must never leave a partial or unchecked file at the final path.
   $tmp = "$out.$PID.tmp"
-  Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $tmp
-  if ((Get-FileHash -Algorithm SHA256 -Path $tmp).Hash -ne $want) { Remove-Item -Force $tmp; throw "Checksum mismatch: $name" }
-  Move-Item -Force -Path $tmp -Destination $out
+  try {
+    Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $tmp
+    if ((Get-FileHash -Algorithm SHA256 -Path $tmp).Hash -ne $want) { throw "Checksum mismatch: $name" }
+    Move-Item -Force -Path $tmp -Destination $out
+  } finally { Remove-Item -Force -Path $tmp -ErrorAction SilentlyContinue }
 }
 
 function Get-Zipped($url, $sumsUrl, $name, [string[]]$exes) {

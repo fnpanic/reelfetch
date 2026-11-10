@@ -47,6 +47,8 @@ const ready = (async () => {
   for (const [k, v] of Object.entries((s.tabInfo ?? {}) as Record<string, { thumbnail?: string; drm?: boolean; names?: [string, PostName][] }>))
     tabInfo.set(Number(k), { ...v, names: Array.isArray(v.names) ? new Map(v.names) : undefined });
   jobs = (s.jobs ?? []) as Job[];
+  // An analysis that died with the previous worker would show "…" forever: let it run again.
+  for (const m of [...media.values()].flat()) if (m.analyzed === false) m.analyzed = undefined;
   // Engine jobs can only survive a background restart if the offscreen document survived.
   const engineAlive = usesOffscreen() && (await hasOffscreen());
   for (const j of jobs)
@@ -156,6 +158,7 @@ async function addMedia(
   /** False for URLs only reported by page content: never fetch those without a user click. */
   autoAnalyze = true,
 ): Promise<MediaItem | undefined> {
+  if (typeof url !== 'string' || url.length >= 8192) return; // items are kept in session storage (10 MB in total)
   const key = kind === 'mse' ? url : mediaKey(url);
   const find = () =>
     (media.get(tabId) ?? []).find((m) => (m.kind === 'mse' ? m.id === extra.id : mediaKey(m.url) === key));
@@ -742,7 +745,7 @@ async function addSiteMedia(tabId: number, frameId: number, items: unknown[], tr
     if (http(it.hls)) await addMedia(tabId, frameId, it.hls, 'hls', meta, trusted);
     else if (http(it.dash)) await addMedia(tabId, frameId, it.dash, 'dash', meta, trusted);
     // Inline manifests are kept in memory and session storage (10 MB quota): bound their size and number.
-    else if (typeof it.dashXml === 'string' && it.dashXml.length < 3e5 && (media.get(tabId) ?? []).filter((m) => m.manifest).length < 20)
+    else if (typeof it.dashXml === 'string' && it.dashXml.length < 3e5 && [...media.values()].flat().filter((m) => m.manifest).length < 20)
       // Inline manifest: a synthetic URL keeps items distinct; BaseURLs resolve against the page.
       await addMedia(tabId, frameId, `about:reelfetch-${ruleId(it.key)}`, 'dash', { ...meta, manifest: it.dashXml });
     else if (Array.isArray(it.variants)) {
@@ -1100,7 +1103,7 @@ chrome.commands.onCommand.addListener((cmd) => {
 });
 
 // A turbo capture cut short by a browser exit leaves its temporary hosts registered (they persist across sessions).
-chrome.runtime.onStartup.addListener(() => void ready.then(() => setCaptureScripts(settings.captureSites)));
+chrome.runtime.onStartup.addListener(() => void ready.then(() => setCaptureScripts(settings.captureSites)).catch(() => {}));
 
 chrome.runtime.onInstalled.addListener(() => {
   void ready.then(() => {

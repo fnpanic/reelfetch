@@ -175,6 +175,13 @@ describe('dash', () => {
     expect(parse('<SegmentTemplate media="$Number$.m4s"><SegmentTimeline><S t="0" r="-1"/></SegmentTimeline></SegmentTemplate>')).toThrow(/duration/);
     expect(parse('<SegmentTemplate media="$Number$.m4s"><SegmentTimeline><S t="0" d="1" r="4000000000"/></SegmentTimeline></SegmentTemplate>')).toThrow(/too many/);
     expect(fillTemplate('$Number%0999999999d$', { RepresentationID: 'v', Number: 7 })).toHaveLength(20);
+    // The limit counts the whole manifest: many representations, each under it, must not add up.
+    const reps = Array.from({ length: 12 }, (_, i) => `<Representation id="v${i}"/>`).join('');
+    const many = `<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" mediaPresentationDuration="PT10S"><Period><AdaptationSet contentType="video">
+      <SegmentTemplate media="$RepresentationID$/$Number$.m4s"><SegmentTimeline><S t="0" d="1" r="99999"/></SegmentTimeline></SegmentTemplate>${reps}</AdaptationSet></Period></MPD>`;
+    expect(() => parseMpd(many, 'https://a.example/m.mpd')).toThrow(/too many/);
+    // ...and it starts again with the next manifest.
+    expect(parseMpd(one('<SegmentTemplate duration="2" media="$Number$.m4s"/>'), 'https://a.example/m.mpd').periods[0].reps[0].segments).toHaveLength(5);
   });
 });
 

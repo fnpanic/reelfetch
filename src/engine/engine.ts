@@ -353,6 +353,7 @@ async function recordLive(t: Track, spool: Spool, ctl: Control, c: Counter, repo
         if (added.length) await ctl.prepare?.([...hosts]);
         c.segmentsTotal += fresh.length;
         await downloadSegments(fresh, spool, ctl, c, report, state, isVideo);
+        lastFresh = Date.now(); // a long first batch must not count as idle time
         fresh.forEach((x) => seen.add(segKey(x)));
       }
     } catch (e) {
@@ -442,8 +443,9 @@ async function downloadRanges(url: string, spool: Spool, ctl: Control, c: Counte
 async function truncateForPreview(tracks: Track[], seconds: number, signal: AbortSignal): Promise<Track[]> {
   const out: Track[] = [];
   for (const t of tracks) {
-    if (t.name === 'subs' || t.url) continue; // whole files are previewed by the UI directly
-    const segs = t.poll ? (await t.poll(signal)).segments.slice(-2) : (t.segments ?? []);
+    if (t.name === 'subs') continue;
+    // A single-file DASH representation (t.url) is previewed as its one "segment", as before it was streamed.
+    const segs = t.url ? [{ url: t.url, duration: 0, seq: 0 }] : t.poll ? (await t.poll(signal)).segments.slice(-2) : (t.segments ?? []);
     const take: Segment[] = [];
     for (const seg of segs) {
       take.push(seg);

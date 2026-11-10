@@ -3,6 +3,26 @@
 All notable changes to ReelFetch. Versions follow [semantic versioning](https://semver.org/); dates are release
 dates. Releases are published to the update server with `npm run release:deploy` (see README → Publishing a release).
 
+## 1.5.1 - 2026-11-10
+
+Follow-up to 1.5.0 from an independent review of its changes.
+
+### Fixed
+- Live DASH streams with a very long time-shift window failed with "too many segments" (new in 1.5.0).
+- Video preview of single-file DASH items (Facebook, Instagram) showed nothing (new in 1.5.0).
+- The segment limit for DASH manifests now counts the whole manifest, so many representations cannot add up to
+  a hang.
+- The popup and sidebar asked the background for their state in an endless loop while open.
+- A live recording whose first batch of segments took longer than two minutes could stop right after it.
+- Very long URLs are no longer listed, and inline manifests are limited across all tabs, so the saved state stays
+  inside the browser's session-storage quota.
+- An item whose analysis was cut off by a service-worker restart is analyzed again instead of showing "…" forever.
+- Capture-site hosts containing `_` are accepted; a failed tool download no longer leaves a temp file behind.
+
+### Known limits
+- A stream URL that a page **requests itself** is still analyzed automatically (that is how detection works), and
+  thumbnails named by a page are loaded when the list opens. Only URLs a page merely *reports* wait for you.
+
 ## 1.5.0 - 2026-11-10
 
 Result of a full code, UI and security review. **Run the new Windows setup once**: the updater itself is only
@@ -18,7 +38,7 @@ replaced by a setup, and signed updates, the yt-dlp fixes and the uninstall fix 
 - **Hostile DASH manifests** (zero segment duration, billions of repeats, gigabyte-wide number padding) hung the
   download engine. They are rejected.
 - The offscreen engine and the engine-event channel no longer accept messages from content scripts.
-- A tab keeps at most 500 media items and 20 inline manifests, so a page cannot exhaust the extension's storage.
+- A tab keeps at most 500 media items and inline manifests are limited, so a page cannot grow the list without bound.
 
 ### Fixed
 - **The update check ran about every minute** instead of every 6 hours (the alarm was re-armed on every
@@ -39,7 +59,7 @@ replaced by a setup, and signed updates, the yt-dlp fixes and the uninstall fix 
 
 ### Changed
 - Light theme: darker accent red, so button and link text meets WCAG AA contrast.
-- The ⋮ menu closes with Esc and when the focus leaves it.
+- The ⋮ menu closes when the focus leaves it (and with Esc in the sidebar; in the popup Esc closes the popup).
 - Finished yt-dlp downloads get a **Show download folder** button.
 - The title picker and several error messages are translated.
 - `release:deploy` runs typecheck and tests first and uses a pinned wrangler version.

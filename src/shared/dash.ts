@@ -1,8 +1,10 @@
 /** MPEG-DASH MPD parser: turns every representation into a flat segment list. Needs DOMParser. */
 import type { ByteRange, Segment } from './hls';
 
-/** More segments than any real stream lists (24 h of 1 s segments is 86,400). */
-const MAX_SEGMENTS = 200_000;
+/** More segments than any real manifest lists across all its representations (24 h of 1 s segments is 86,400 each). */
+const MAX_SEGMENTS = 500_000;
+/** Segments listed by the manifest being parsed: the limit is per manifest, or many representations would add up. */
+let listed = 0;
 
 export type DashContent = 'video' | 'audio' | 'text';
 
@@ -127,7 +129,7 @@ function templateSegments(
     return d;
   };
   const push = (n: number, time: number, d: number) => {
-    if (out.length >= MAX_SEGMENTS) throw new Error('DASH manifest: too many segments');
+    if (++listed > MAX_SEGMENTS) throw new Error('DASH manifest: too many segments');
     out.push({
       url: new URL(fillTemplate(a.media, { ...vars, Number: n, Time: time }), base).toString(),
       duration: d / timescale,
@@ -152,7 +154,8 @@ function templateSegments(
     const d = dur(a.duration);
     const elapsed = (live.now - live.availabilityStart) / 1000 - live.periodStart;
     const last = Math.floor((elapsed * timescale) / d) - 1;
-    const first = Math.max(0, last - Math.floor((live.timeShift * timescale) / d));
+    // A week-long time-shift window is millions of segments; recording starts at the live edge anyway.
+    const first = Math.max(0, last - Math.min(Math.floor((live.timeShift * timescale) / d), 10_000));
     for (let i = first; i <= last; i++) push(startNumber + i, pto + i * d, d);
   } else if (a.duration && periodDuration != null) {
     const d = dur(a.duration);
@@ -190,6 +193,7 @@ function contentTypeOf(as: Element, rep: Element): DashContent | null {
 }
 
 export function parseMpd(xml: string, manifestUrl: string, now = Date.now()): DashManifest {
+  listed = 0;
   const doc = new DOMParser().parseFromString(xml, 'application/xml');
   const mpd = doc.documentElement;
   if (!mpd || mpd.localName !== 'MPD') throw new Error('Not a DASH manifest');

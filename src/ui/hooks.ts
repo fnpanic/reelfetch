@@ -43,7 +43,8 @@ export function useAppState(): AppState | null {
   useEffect(() => {
     if (tabId == null) return;
     let alive = true;
-    const load = () => send<AppState>({ type: 'get-state', tabId }).then((s) => alive && s && setState(s));
+    // Not through send(): its refresh hook calls load again, which would poll get-state in an endless loop.
+    const load = () => (chrome.runtime.sendMessage({ type: 'get-state', tabId }) as Promise<AppState>).then((s) => alive && s && setState(s));
     void load();
     let port: chrome.runtime.Port;
     const connect = () => {

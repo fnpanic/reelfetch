@@ -20,7 +20,7 @@ export function siteHost(entry: string): string {
   const h = entry.trim().replace(/^[a-z]+:\/\//i, '').replace(/^\*\./, '').replace(/[/?#].*$/, '');
   try {
     const host = new URL(`http://${h}`).hostname.replace(/^www\./, ''); // lower-cases, punycodes
-    return /^[a-z0-9-]+(\.[a-z0-9-]+)*$/.test(host) ? host : '';
+    return /^[a-z0-9_-]+(\.[a-z0-9_-]+)*$/.test(host) ? host : '';
   } catch {
     return '';
   }
