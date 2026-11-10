@@ -169,5 +169,6 @@
   "updates_title": "Aktualizácie",
   "update_manual_hint": "Stiahnite nový inštalátor a spustite ho na aktualizáciu.",
   "turbo_partial": "Čiastočné: web zastavil prehrávanie, uložené",
-  "time_left": "zostáva $1"
+  "time_left": "zostáva $1",
+  "same_name_more": "Ďalších $1 s rovnakým názvom"
 }

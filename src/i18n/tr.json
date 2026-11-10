@@ -169,5 +169,6 @@
   "updates_title": "Güncellemeler",
   "update_manual_hint": "Güncellemek için yeni kurulumu indirip çalıştırın.",
   "turbo_partial": "Kısmi: site oynatmayı durdurdu, kaydedilen",
-  "time_left": "$1 kaldı"
+  "time_left": "$1 kaldı",
+  "same_name_more": "Aynı ada sahip $1 tane daha"
 }

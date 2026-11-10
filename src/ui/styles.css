@@ -128,6 +128,7 @@ main {
   display: flex; gap: 10px; align-items: flex-start; padding: 8px; background: var(--panel);
   border: 1px solid var(--line); border-radius: var(--radius); position: relative;
 }
+.more-same { margin: -4px 0 0 8px; font-size: 0.9em; }
 .thumb {
   flex: none; width: 64px; height: 40px; border-radius: 5px; overflow: hidden; background: var(--chip);
   display: grid; place-items: center; color: var(--muted);

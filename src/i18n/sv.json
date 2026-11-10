@@ -169,5 +169,6 @@
   "updates_title": "Uppdateringar",
   "update_manual_hint": "Ladda ner det nya installationsprogrammet och kör det för att uppdatera.",
   "turbo_partial": "Delvis: webbplatsen stoppade uppspelningen, sparat",
-  "time_left": "$1 kvar"
+  "time_left": "$1 kvar",
+  "same_name_more": "$1 till med samma namn"
 }

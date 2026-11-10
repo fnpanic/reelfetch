@@ -169,5 +169,6 @@
   "updates_title": "Opdateringer",
   "update_manual_hint": "Hent det nye installationsprogram, og kør det for at opdatere.",
   "turbo_partial": "Delvis: siden stoppede afspilningen, gemt",
-  "time_left": "$1 tilbage"
+  "time_left": "$1 tilbage",
+  "same_name_more": "$1 mere med samme navn"
 }

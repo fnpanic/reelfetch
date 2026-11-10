@@ -7,7 +7,9 @@ list, and how to diagnose the problems that are most often reported.
 
 1. **Detection** - the background service worker sees media requests (`webRequest`), the content script reports
    `<video>`/`<audio>` sources and page metadata, and site extractors (YouTube, Vimeo, ...) report player data.
-   Each find becomes an item in the popup.
+   Each find becomes an item in the popup. Items with the same name are folded into one row showing the most
+   likely one (no DRM or error, then HLS/DASH, then longest, then largest); the rest open with
+   **N more with the same name**. The toolbar badge counts these rows, not the streams behind them.
 2. **Naming** - the file name comes from the filename template (Settings). `{title}` is, in order of precedence:
    the text picked by a smart-naming rule for the site, the post title on feed pages (Reddit, including RedGifs
    embeds), the site extractor's title, and finally the tab title.

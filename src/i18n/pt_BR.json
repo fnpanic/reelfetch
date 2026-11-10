@@ -169,5 +169,6 @@
   "updates_title": "Atualizações",
   "update_manual_hint": "Baixe o novo instalador e execute-o para atualizar.",
   "turbo_partial": "Parcial: o site interrompeu a reprodução, salvo",
-  "time_left": "faltam $1"
+  "time_left": "faltam $1",
+  "same_name_more": "Mais $1 com o mesmo nome"
 }

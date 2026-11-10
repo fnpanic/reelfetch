@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { t } from '../../shared/i18n';
-import { cleanTitle } from '../../shared/naming';
-import { pickVariant } from '../../shared/quality';
+import { groupByTitle, mediaTitle, pickVariant } from '../../shared/quality';
 import type { Settings } from '../../shared/settings';
 import type { MediaItem } from '../../shared/types';
 import { formatBytes, formatDuration, hostOf, hostMatches, ytDlpCommand } from '../../shared/util';
@@ -46,8 +45,8 @@ export function MediaView({ state, settings, update, onQueued }: Props) {
         </div>
       ) : (
         <ul className="list">
-          {media.map((m) => (
-            <MediaRow key={m.id} item={m} settings={settings} onQueued={onQueued} tabId={tabId} ytdlp={!!state.update.ytdlp} />
+          {groupByTitle(media).map(({ main, more }) => (
+            <MediaGroup key={main.id} main={main} more={more} row={{ settings, onQueued, tabId, ytdlp: !!state.update.ytdlp }} />
           ))}
         </ul>
       )}
@@ -117,6 +116,26 @@ export function MediaView({ state, settings, update, onQueued }: Props) {
   );
 }
 
+type RowProps = Omit<Parameters<typeof MediaRow>[0], 'item'>;
+
+/** The most likely item of a name; other items with the same name fold out on demand. */
+function MediaGroup({ main, more, row }: { main: MediaItem; more: MediaItem[]; row: RowProps }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <MediaRow item={main} {...row} />
+      {more.length > 0 && (
+        <li className="more-same">
+          <button className="link" aria-expanded={open} onClick={() => setOpen(!open)}>
+            {open ? '▾' : '▸'} {t('same_name_more', more.length)}
+          </button>
+        </li>
+      )}
+      {open && more.map((m) => <MediaRow key={m.id} item={m} {...row} />)}
+    </>
+  );
+}
+
 function Thumb({ item, settings, variantUrl }: { item: MediaItem; settings: Settings; variantUrl?: string }) {
   const [ok, setOk] = useState(true);
   const [preview, setPreview] = useState<string | null>(null);
@@ -166,7 +185,7 @@ function MediaRow({
   const [note, setNote] = useState<string>();
   const [error, setError] = useState<string>();
   const selected = variants.find((v) => v.id === variantId) ?? pickVariant(variants, settings.preferredQuality);
-  const title = item.title || cleanTitle(item.pageTitle, hostOf(item.pageUrl)) || hostOf(item.url) || item.url;
+  const title = mediaTitle(item);
   const size = selected?.size ?? item.size ?? item.mse?.bytes;
   const capture = item.kind === 'mse';
   const action = capture ? 'download' : settings.defaultAction;

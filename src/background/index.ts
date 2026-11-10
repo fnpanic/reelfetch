@@ -6,7 +6,7 @@ import { classify, mediaKey } from '../shared/detect';
 import { t } from '../shared/i18n';
 import type { ContentMessage, EngineEvent, PostName, UiRequest } from '../shared/messages';
 import { buildBasename, cleanTitle } from '../shared/naming';
-import { visibleMedia } from '../shared/quality';
+import { groupByTitle, mediaTitle, visibleMedia } from '../shared/quality';
 import { loadSettings, type Settings } from '../shared/settings';
 import type { HistoryEntry, Job, MediaItem, RequestHeaders, Variant } from '../shared/types';
 import { formatDuration, hostMatches, hostOf, uid } from '../shared/util';
@@ -87,10 +87,12 @@ chrome.runtime.onConnect.addListener((port) => {
 });
 
 const visible = (tabId: number) => visibleMedia(media.get(tabId) ?? [], settings?.mediaOrder ?? 'smart');
+/** One item per name, as the list shows them unfolded. */
+const likely = (tabId: number) => groupByTitle(visible(tabId)).map((g) => g.main);
 
 function updateBadge(tabId: number) {
   if (tabId < 0) return;
-  const n = visible(tabId).length;
+  const n = likely(tabId).length;
   void chrome.action.setBadgeText({ tabId, text: n ? String(n) : '' }).catch(() => {});
   void chrome.action.setBadgeBackgroundColor({ tabId, color: '#e5484d' }).catch(() => {});
 }
@@ -1000,7 +1002,7 @@ async function buildMenu() {
   chrome.contextMenus.create({ id: 'rf', title: 'ReelFetch', contexts });
   chrome.contextMenus.create({ id: 'rf-src', parentId: 'rf', title: t('menu_download_this'), contexts: ctx('video', 'audio') });
   const tab = await activeTab();
-  const items = tab?.id != null ? visible(tab.id).slice(0, 12) : [];
+  const items = tab?.id != null ? likely(tab.id).slice(0, 12) : [];
   if (!items.length) {
     chrome.contextMenus.create({ id: 'rf-none', parentId: 'rf', title: t('no_media'), enabled: false, contexts });
     return;
@@ -1008,7 +1010,7 @@ async function buildMenu() {
   chrome.contextMenus.create({ id: 'rf-best', parentId: 'rf', title: t('menu_download_best'), contexts });
   chrome.contextMenus.create({ id: 'rf-sep', parentId: 'rf', type: 'separator', contexts });
   for (const m of items) {
-    const label = [m.kind.toUpperCase(), m.variants?.[0]?.label, cleanTitle(m.pageTitle, hostOf(m.pageUrl))]
+    const label = [m.kind.toUpperCase(), m.variants?.[0]?.label, mediaTitle(m)]
       .filter(Boolean)
       .join(' · ');
     chrome.contextMenus.create({ id: `rf-m:${m.id}`, parentId: 'rf', title: label.slice(0, 80), contexts });

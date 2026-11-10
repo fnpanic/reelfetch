@@ -169,5 +169,6 @@
   "updates_title": "Updates",
   "update_manual_hint": "Download de nieuwe installer en voer die uit om bij te werken.",
   "turbo_partial": "Gedeeltelijk: de site stopte het afspelen, opgeslagen",
-  "time_left": "nog $1"
+  "time_left": "nog $1",
+  "same_name_more": "Nog $1 met dezelfde naam"
 }

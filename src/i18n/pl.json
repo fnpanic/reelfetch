@@ -169,5 +169,6 @@
   "updates_title": "Aktualizacje",
   "update_manual_hint": "Pobierz nowy instalator i uruchom go, aby zaktualizować.",
   "turbo_partial": "Częściowe: strona zatrzymała odtwarzanie, zapisano",
-  "time_left": "pozostało $1"
+  "time_left": "pozostało $1",
+  "same_name_more": "Jeszcze $1 o tej samej nazwie"
 }

@@ -249,12 +249,22 @@ try {
   check(!!state.media.find((m) => m.kind === 'direct' && m.url.endsWith('direct.mp4')), 'direct <video> source detected');
   check(!!state.media.find((m) => m.url.endsWith('index.m3u8'))?.encrypted, 'AES-128 HLS flagged as encrypted');
   const badge = await sw.evaluate((id) => chrome.action.getBadgeText({ tabId: id }), tabId);
-  check(badge === String(state.media.length), `badge shows ${badge}`);
+  // All streams of this page share its title: badge and list show the most likely one, the rest fold away.
+  const names = new Set(state.media.map((m) => (m.title || m.pageTitle).toLowerCase())).size;
+  check(badge === String(names), `badge counts names, not streams: ${badge} for ${state.media.length} streams`);
 
   await ui.setViewportSize({ width: 460, height: 560 });
   await ui.goto(`chrome-extension://${extId}/ui/popup.html?tabId=${tabId}`);
   await ui.waitForSelector('.row');
+  const folded = await ui.locator('.media-view .row').count();
+  const firstName = await ui.locator('.media-view .row .name').first().textContent();
+  check(folded === names && (await ui.locator('.more-same').count()) === names, `same-named streams folded: ${folded} row(s) for ${state.media.length}`);
+  check((await ui.locator('.media-view .row .chip').first().textContent()) !== 'DIRECT', `streams ranked above the plain file: "${firstName}"`);
   await ui.screenshot({ path: join(shots, 'reelfetch-popup.png') });
+  await ui.click('.more-same button');
+  check((await ui.locator('.media-view .row').count()) === state.media.length, 'same-named streams unfold on click');
+  await ui.screenshot({ path: join(shots, 'reelfetch-popup-unfolded.png') });
+  await ui.click('.more-same button');
   await ui.click('.row .more');
   await ui.screenshot({ path: join(shots, 'reelfetch-menu.png') });
   await ui.click('.row .more');

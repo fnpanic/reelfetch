@@ -169,5 +169,6 @@
   "updates_title": "更新",
   "update_manual_hint": "下载并运行新的安装程序以更新。",
   "turbo_partial": "不完整：网站停止了播放，已保存",
-  "time_left": "剩余 $1"
+  "time_left": "剩余 $1",
+  "same_name_more": "另有 $1 个同名项"
 }

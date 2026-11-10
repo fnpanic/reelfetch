@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { parseAttributes, parseHls, ivFromSequence } from '../src/shared/hls';
 import { fillTemplate, parseIsoDuration, parseMpd } from '../src/shared/dash';
 import { classify, extFor, mediaKey } from '../src/shared/detect';
-import { pickByLang, pickVariant, visibleMedia } from '../src/shared/quality';
+import { groupByTitle, pickByLang, pickVariant, visibleMedia } from '../src/shared/quality';
 import { buildBasename, cleanTitle } from '../src/shared/naming';
 import { sanitizeSegment, sanitizeSubdir, ytDlpCommand, ytDlpTarget } from '../src/shared/util';
 import type { MediaItem } from '../src/shared/types';
@@ -219,6 +219,20 @@ describe('quality & ordering', () => {
     expect(visibleMedia(items, 'smart').map((m) => m.id)).toEqual(['b', 'a']);
     expect(visibleMedia(items, 'newest').map((m) => m.id)).toEqual(['a', 'b']);
   });
+
+  it('keeps the most likely of same-named items and folds the rest', () => {
+    const base = { tabId: 1, pageUrl: 'https://www.site.com/v/1', pageTitle: 'Clip - Site', headers: {}, detectedAt: 1 };
+    const items = [
+      { ...base, id: 'ad', kind: 'direct', url: 'https://x/ad.mp4', duration: 15, size: 9e6 },
+      { ...base, id: 'main', kind: 'hls', url: 'https://x/m.m3u8', duration: 600 },
+      { ...base, id: 'err', kind: 'dash', url: 'https://x/m.mpd', duration: 600, error: 'HTTP 403' },
+      { ...base, id: 'other', kind: 'direct', url: 'https://x/o.mp4', title: 'Other' },
+    ] as MediaItem[];
+    const groups = groupByTitle(items);
+    expect(groups.map((g) => g.main.id)).toEqual(['main', 'other']);
+    expect(groups[0].more.map((m) => m.id)).toEqual(['ad', 'err']);
+    expect(groups[1].more).toEqual([]);
+  });
 });
 
 describe('naming', () => {
@@ -262,4 +276,5 @@ describe('ytDlpCommand', () => {
     expect(ytDlpTarget({ ...base, url: 'turbo:yt:abc' })).toEqual({ url: 'https://example.com/watch' });
     expect(ytDlpTarget({ ...base, headers: {} }, 'https://cdn.example/a.mp4')).toEqual({ url: 'https://cdn.example/a.mp4', referer: 'https://example.com/watch' });
   });
+
 });

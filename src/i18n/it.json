@@ -169,5 +169,6 @@
   "updates_title": "Aggiornamenti",
   "update_manual_hint": "Scarica il nuovo programma di installazione ed eseguilo per aggiornare.",
   "turbo_partial": "Parziale: il sito ha interrotto la riproduzione, salvato",
-  "time_left": "mancano $1"
+  "time_left": "mancano $1",
+  "same_name_more": "Altri $1 con lo stesso nome"
 }

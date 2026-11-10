@@ -169,5 +169,6 @@
   "updates_title": "更新",
   "update_manual_hint": "新しいセットアップをダウンロードして実行すると更新されます。",
   "turbo_partial": "一部のみ: サイトが再生を停止しました。保存済み",
-  "time_left": "残り $1"
+  "time_left": "残り $1",
+  "same_name_more": "同じ名前の他の $1 件"
 }

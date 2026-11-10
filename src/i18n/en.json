@@ -169,5 +169,6 @@
   "updates_title": "Updates",
   "update_manual_hint": "Download the new setup and run it to update.",
   "turbo_partial": "Partial: the site stopped playback, saved",
-  "time_left": "$1 left"
+  "time_left": "$1 left",
+  "same_name_more": "$1 more with the same name"
 }

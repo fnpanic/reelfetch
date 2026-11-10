@@ -61,9 +61,11 @@ without the setup (zip, Firefox) only show a banner linking to the new download.
 
 ## Use
 
-1. Open a page and start the video. The toolbar badge shows how many media were found.
+1. Open a page and start the video. The toolbar badge shows how many videos were found.
 2. Click the ReelFetch icon (or press **Alt+↑**). Every detected media is listed with its type, quality, duration,
-   size and languages.
+   size and languages. Media with the same name (a page usually loads its video as several streams, all named after
+   the page) show as one row, the most likely one: no DRM or error, a stream (HLS/DASH), longest, largest. The others
+   fold out under **N more with the same name**.
 3. Click the main button (by default **Download**; configurable to *Download As…*, *Audio* or *Copy URL*), or open
    the **⋮** menu for *Download*, *Download As…*, *Download audio only*, *Copy URL*, *Copy yt-dlp command*, *Play*, *Turbo capture*,
    *Pick the title from the page…* and *Details*. Pick a quality in the drop-down when a stream offers several.
@@ -112,7 +114,7 @@ analysis with REA).
 | Popup or sidebar, window size, theme, text size | ✅ | ✅ (Chrome side panel / Firefox sidebar) |
 | Right-click menu with detected media | ✅ | ✅ |
 | Hotkeys Alt+↑ (open) and Alt+↓ (default action) | ✅ | ✅ |
-| Media sorting (smart/newest/oldest), hide duplicate sub-playlists | ✅ | ✅ |
+| Media sorting (smart/newest/oldest), hide duplicate sub-playlists, fold same-named media | ✅ | ✅ |
 | "No video?" force-detection reload, optionally clearing the site's cookies | ✅ | ✅ |
 | Copy media details to clipboard | ✅ | ✅ |
 | Terms notice, reset settings, reload add-on | ✅ | ✅ |

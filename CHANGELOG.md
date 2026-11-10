@@ -3,6 +3,14 @@
 All notable changes to ReelFetch. Versions follow [semantic versioning](https://semver.org/); dates are release
 dates. Releases are published to the update server with `npm run release:deploy` (see README → Publishing a release).
 
+## 1.4.2 - 2026-11-10
+
+### Changed
+- **One row per video name.** Pages that load their video as several streams (HLS, DASH, a plain file, ads) used to
+  list the same name several times. The list now shows the most likely one (no DRM or error, a stream, longest,
+  largest) and folds the others under **N more with the same name**. The toolbar badge, the tab count and the
+  right-click menu count names, not streams.
+
 ## 1.4.1 - 2026-11-10
 
 ### Fixed

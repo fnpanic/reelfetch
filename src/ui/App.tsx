@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { t } from '../shared/i18n';
+import { groupByTitle } from '../shared/quality';
 import { useAppState, useSettings } from './hooks';
 import { MediaView } from './views/MediaView';
 import { JobsView } from './views/JobsView';
@@ -41,7 +42,7 @@ export function App({ sidebar }: { sidebar: boolean }) {
 
   const active = state?.jobs.filter((j) => j.status === 'running' || j.status === 'queued').length ?? 0;
   const tabs: [View, string, string, number?][] = [
-    ['media', t('tab_media'), 'film', state?.media.length],
+    ['media', t('tab_media'), 'film', state ? groupByTitle(state.media).length : undefined],
     ['downloads', t('tab_downloads'), 'download', active || undefined],
     ['history', t('tab_history'), 'history'],
     ['settings', t('tab_settings'), 'gear'],

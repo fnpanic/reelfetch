@@ -169,5 +169,6 @@
   "updates_title": "Actualizări",
   "update_manual_hint": "Descărcați noul program de instalare și rulați-l pentru actualizare.",
   "turbo_partial": "Parțial: site-ul a oprit redarea, salvat",
-  "time_left": "mai rămân $1"
+  "time_left": "mai rămân $1",
+  "same_name_more": "Încă $1 cu același nume"
 }

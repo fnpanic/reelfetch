@@ -169,5 +169,6 @@
   "updates_title": "Uppfærslur",
   "update_manual_hint": "Sæktu nýja uppsetningarforritið og keyrðu það til að uppfæra.",
   "turbo_partial": "Að hluta: vefurinn stöðvaði spilun, vistað",
-  "time_left": "$1 eftir"
+  "time_left": "$1 eftir",
+  "same_name_more": "$1 í viðbót með sama nafni"
 }

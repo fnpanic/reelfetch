@@ -169,5 +169,6 @@
   "updates_title": "Posodobitve",
   "update_manual_hint": "Prenesite novi namestitveni program in ga zaženite za posodobitev.",
   "turbo_partial": "Delno: spletno mesto je ustavilo predvajanje, shranjeno",
-  "time_left": "še $1"
+  "time_left": "še $1",
+  "same_name_more": "Še $1 z enakim imenom"
 }

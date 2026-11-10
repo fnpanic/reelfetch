@@ -169,5 +169,6 @@
   "updates_title": "Frissítések",
   "update_manual_hint": "Töltse le és futtassa az új telepítőt a frissítéshez.",
   "turbo_partial": "Részleges: a webhely leállította a lejátszást, mentve",
-  "time_left": "még $1"
+  "time_left": "még $1",
+  "same_name_more": "Még $1 azonos névvel"
 }

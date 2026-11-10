@@ -169,5 +169,6 @@
   "updates_title": "업데이트",
   "update_manual_hint": "새 설치 프로그램을 다운로드하여 실행하면 업데이트됩니다.",
   "turbo_partial": "일부만: 사이트가 재생을 중지함, 저장됨",
-  "time_left": "$1 남음"
+  "time_left": "$1 남음",
+  "same_name_more": "같은 이름의 항목 $1개 더"
 }
