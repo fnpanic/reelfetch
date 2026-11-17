@@ -383,9 +383,19 @@ const RANGE_ONLY = /(^|\.)googlevideo\.com$/;
 async function downloadDirect(url: string, spool: Spool, ctl: Control, c: Counter, report: () => void) {
   if (RANGE_ONLY.test(new URL(url).hostname)) return downloadRanges(url, spool, ctl, c, report);
   let total: number | undefined;
+  const marks: { at: number; bytes: Uint8Array }[] = [];
   for (let attempt = 0; ; attempt++) {
-    const pos = spool.size;
     try {
+      if (spool.size) {
+        // Some CDNs (CDN77) drop parts of a response and then close it early: resuming at our byte count would
+        // splice the rest in at the wrong place (frozen picture, no sound). Resume after the last verified mark.
+        const ok = await lastGoodMark(url, marks, ctl.signal);
+        const keep = ok < 0 ? 0 : marks[ok].at;
+        marks.length = Math.max(0, ok);
+        c.bytes -= spool.size - keep;
+        await spool.truncate(keep);
+      }
+      const pos = spool.size;
       const res = await fetch(url, { credentials: 'include', signal: ctl.signal, headers: pos ? { Range: `bytes=${pos}-` } : {} });
       // Server ignored the Range request: not retryable (HttpError 200), but say why instead of "HTTP 200".
       if (pos && res.status === 200)
@@ -400,6 +410,9 @@ async function downloadDirect(url: string, spool: Spool, ctl: Control, c: Counte
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
+        const at = Math.ceil(spool.size / MARK) * MARK;
+        if (at + MARK_LEN <= spool.size + value.byteLength)
+          marks.push({ at, bytes: value.slice(at - spool.size, at - spool.size + MARK_LEN) });
         await spool.append(value);
         c.bytes += value.byteLength;
         report();
@@ -414,6 +427,36 @@ async function downloadDirect(url: string, spool: Spool, ctl: Control, c: Counte
       await sleep(Math.min(8000, 400 * 2 ** attempt));
     }
   }
+}
+
+/** A few bytes of every MiB of a direct download, re-read from the server before resuming. */
+const MARK = 1 << 20;
+const MARK_LEN = 16;
+
+async function markMatches(url: string, m: { at: number; bytes: Uint8Array }, signal: AbortSignal) {
+  const res = await fetch(url, { credentials: 'include', signal, headers: { Range: `bytes=${m.at}-${m.at + MARK_LEN - 1}` } });
+  if (res.status !== 206) {
+    await res.body?.cancel();
+    if (res.status === 200)
+      throw Object.assign(new HttpError(200, url), { message: 'The connection dropped and this server cannot resume downloads - retry the download' });
+    throw new HttpError(res.status, url);
+  }
+  const got = new Uint8Array(await res.arrayBuffer());
+  return got.byteLength === MARK_LEN && got.every((b, i) => b === m.bytes[i]);
+}
+
+/** Index of the last mark the server still agrees with (all before it then do too: a gap shifts everything after it). */
+async function lastGoodMark(url: string, marks: { at: number; bytes: Uint8Array }[], signal: AbortSignal) {
+  let lo = -1;
+  let hi = marks.length - 1;
+  if (hi < 0 || (await markMatches(url, marks[hi], signal))) return hi;
+  hi--;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (await markMatches(url, marks[mid], signal)) lo = mid;
+    else hi = mid - 1;
+  }
+  return lo;
 }
 
 /** Sequential 8 MB range requests (resumable per chunk) for CDNs that throttle plain requests. */

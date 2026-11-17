@@ -22,7 +22,10 @@ list, and how to diagnose the problems that are most often reported.
    File System, so multi-GB files don't sit in RAM.
    - **Plain files** (`.mp4`, `.webm`, `.mkv`, ...): one streaming request, like the browser's own downloader. If the
      connection drops or the server answers 5xx/408/429, the download resumes with a `Range` request from the
-     current position (up to 5 attempts, exponential backoff). The file is saved byte-identical - no remux.
+     current position (up to 5 attempts, exponential backoff). Before resuming, 16 bytes of every MiB received so
+     far are compared with the server (a binary search, about ten tiny `Range` requests): some CDNs leave out part of
+     a response before closing it, and the download then continues after the last part that still matches instead
+     of splicing data in at the wrong place. The file is saved byte-identical - no remux.
    - **YouTube's CDN** (`googlevideo.com`) throttles whole-file requests, so it is fetched in 8 MB ranges.
    - **YouTube with yt-dlp** (Windows setup 1.4.0+): YouTube's CDN answers ReelFetch's own requests more and more
      often with `HTTP 403`, so YouTube jobs go to [yt-dlp](https://github.com/yt-dlp/yt-dlp) through the Windows
@@ -42,6 +45,7 @@ list, and how to diagnose the problems that are most often reported.
 
 | Symptom | Cause | What to do |
 |---|---|---|
+| Video **freezes part-way and has no sound** from that point (direct `.mp4` download, file size looks right) | Before 1.5.2: the CDN left out part of the response and dropped the connection; the resume spliced the rest in at the wrong offset. | Update to 1.5.2 or later and download the video again (existing files stay broken). |
 | Download shows **canceled**, file has the server's name (e.g. `abc123-silent.mp4`) | A download-manager extension (AB Download Manager, IDM integration, ...) took over a plain `http(s)` browser download. Fixed in 1.2.3: ReelFetch hands over `blob:` URLs, which those extensions ignore. | Update to 1.2.3 or later. |
 | **HTTP 410** (Gone) or 403 part-way through a large file | The host's signed link expired or allows few requests, and 1.2.3 made one request per 8 MB chunk. Fixed in 1.2.4 (one streaming request). | Update to 1.2.4 or later and retry the job. If it still happens, the link expired before the download started: reload the page so the site issues a fresh link, then download again. |
 | Large files are **slow** (well under the connection's speed) | 1.2.3's per-chunk requests. Fixed in 1.2.4. | Update to 1.2.4 or later. |

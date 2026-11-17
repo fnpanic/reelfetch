@@ -74,8 +74,16 @@ beforeAll(async () => {
         setTimeout(() => res.destroy(), 50);
         return;
       }
+      if (path === '/gappy.bin' && !req.headers.range) {
+        // CDN77-style broken response: part of a 4 MiB slice is missing, later data follows, then the connection drops.
+        res.setHeader('Content-Length', BIG.byteLength);
+        res.write(BIG.subarray(0, 4 * 2 ** 20 - 5000));
+        res.write(BIG.subarray(4 * 2 ** 20, 10 * 2 ** 20));
+        setTimeout(() => res.destroy(), 50);
+        return;
+      }
       if (path === '/big.bin') bigRequests++;
-      const body = /^\/(big|expiring|drop)\.bin$/.test(path) ? BIG : await readFile(join(root, path));
+      const body = /^\/(big|expiring|drop|gappy)\.bin$/.test(path) ? BIG : await readFile(join(root, path));
       const range = /bytes=(\d+)-(\d*)/.exec(req.headers.range ?? '');
       if (range) {
         // Range support like real CDNs (exercises the chunked downloader).
@@ -254,6 +262,10 @@ describe('engine', () => {
 
   it('resumes a dropped connection with a Range request', async () => {
     expect(await same(await download(job(media('direct', 'drop.bin')), settings, ctl()))).toBe(true);
+  });
+
+  it('re-fetches from before a gap when a dropped response skipped bytes', async () => {
+    expect(await same(await download(job(media('direct', 'gappy.bin')), settings, ctl()))).toBe(true);
   });
 
   it('explains a dropped connection on a server without Range support (no "HTTP 200")', async () => {

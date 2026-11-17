@@ -3,6 +3,14 @@
 All notable changes to ReelFetch. Versions follow [semantic versioning](https://semver.org/); dates are release
 dates. Releases are published to the update server with `npm run release:deploy` (see README → Publishing a release).
 
+## 1.5.2 - 2026-11-17
+
+### Fixed
+- Direct downloads from some CDNs (seen on CDN77, e.g. porno-cum.com) froze part-way through playback and lost
+  their sound. The server sometimes left out part of the file and then closed the connection; resuming at the
+  number of bytes received spliced the rest in at the wrong place. Before resuming, ReelFetch now re-reads a few
+  bytes of every MiB it already has from the server and continues after the last one that still matches.
+
 ## 1.5.1 - 2026-11-10
 
 Follow-up to 1.5.0 from an independent review of its changes.

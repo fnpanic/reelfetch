@@ -11,6 +11,8 @@ export interface Spool {
   size: number;
   /** Sequential append. */
   append(data: Uint8Array): Promise<void>;
+  /** Cut appended data back to `size` bytes (the next append continues there). */
+  truncate(size: number): Promise<void>;
   /** Random-access sink for mediabunny's StreamTarget; closed by the muxer. */
   sink(): WritableStream<StreamTargetChunk>;
   /** Close (if still open) and return the contents. */
@@ -71,6 +73,10 @@ function opfsSpool(
       pos += data.byteLength;
       s.size = pos;
     },
+    async truncate(size) {
+      await w.write({ type: 'truncate', size });
+      pos = s.size = size;
+    },
     sink() {
       return new WritableStream<StreamTargetChunk>({
         write: (c) => {
@@ -114,6 +120,9 @@ function memorySpool(name: string): Spool {
       grow(s.size + data.byteLength);
       buf.set(data, s.size);
       s.size += data.byteLength;
+    },
+    async truncate(size) {
+      s.size = size;
     },
     sink() {
       return new WritableStream<StreamTargetChunk>({
